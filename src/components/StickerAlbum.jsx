@@ -21,7 +21,6 @@ export function StickerAlbum({ journeys, streakCount }) {
   // Set of unlocked sticker names
   const unlockedMap = new Map();
   stats.earnedStickers.forEach((s) => {
-    // extract symbol or match by name
     ALL_STICKERS.forEach((sticker) => {
       if (s.sticker.includes(sticker.symbol) || s.sticker.includes(sticker.name)) {
         unlockedMap.set(sticker.name, s);
@@ -31,105 +30,35 @@ export function StickerAlbum({ journeys, streakCount }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Overview Stats Bar */}
-      <div 
-        className="stats-overview-row"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
-          gap: 14,
-        }}
-      >
-        <div 
-          style={{
-            background: '#FFFFFF',
-            border: 'var(--border-thick)',
-            borderRadius: 22,
-            padding: '16px 20px',
-            boxShadow: 'var(--card-shadow)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 14,
-          }}
-        >
-          <div 
-            style={{ 
-              width: 48, height: 48, borderRadius: 16, 
-              background: '#FFE0B2', border: '2px solid var(--border-color)', 
-              display: 'flex', alignItems: 'center', justifyContent: 'center' 
-            }}
-          >
-            <Flame size={24} color="#E65100" />
+      {/* Overview Stats Bar (Smooth Horizontal Scroll on Mobile) */}
+      <div className="stats-overview-row">
+        <div className="stats-card">
+          <div className="stats-card-icon" style={{ background: '#FFE0B2' }}>
+            <Flame size={22} color="#E65100" />
           </div>
-          <div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-bubble)' }}>
-              {streakCount} Days
-            </div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>
-              Current Streak
-            </div>
+          <div className="stats-card-info">
+            <div className="stats-value">{streakCount} Days</div>
+            <div className="stats-label">Current Streak</div>
           </div>
         </div>
 
-        <div 
-          style={{
-            background: '#FFFFFF',
-            border: 'var(--border-thick)',
-            borderRadius: 22,
-            padding: '16px 20px',
-            boxShadow: 'var(--card-shadow)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 14,
-          }}
-        >
-          <div 
-            style={{ 
-              width: 48, height: 48, borderRadius: 16, 
-              background: '#C8E6C9', border: '2px solid var(--border-color)', 
-              display: 'flex', alignItems: 'center', justifyContent: 'center' 
-            }}
-          >
-            <CheckCircle size={24} color="#2E7D32" />
+        <div className="stats-card">
+          <div className="stats-card-icon" style={{ background: '#C8E6C9' }}>
+            <CheckCircle size={22} color="#2E7D32" />
           </div>
-          <div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-bubble)' }}>
-              {stats.completedMilestones}/{stats.totalMilestones}
-            </div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>
-              Milestones Conquered
-            </div>
+          <div className="stats-card-info">
+            <div className="stats-value">{stats.completedMilestones}/{stats.totalMilestones}</div>
+            <div className="stats-label">Milestones Conquered</div>
           </div>
         </div>
 
-        <div 
-          style={{
-            background: '#FFFFFF',
-            border: 'var(--border-thick)',
-            borderRadius: 22,
-            padding: '16px 20px',
-            boxShadow: 'var(--card-shadow)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 14,
-          }}
-        >
-          <div 
-            style={{ 
-              width: 48, height: 48, borderRadius: 16, 
-              background: '#E1BEE7', border: '2px solid var(--border-color)', 
-              display: 'flex', alignItems: 'center', justifyContent: 'center' 
-            }}
-          >
-            <Sparkles size={24} color="#6A1B9A" />
+        <div className="stats-card">
+          <div className="stats-card-icon" style={{ background: '#E1BEE7' }}>
+            <Sparkles size={22} color="#6A1B9A" />
           </div>
-          <div>
-            <div style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-bubble)' }}>
-              {stats.completionRate}%
-            </div>
-            <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)' }}>
-              Journey Completion
-            </div>
+          <div className="stats-card-info">
+            <div className="stats-value">{stats.completionRate}%</div>
+            <div className="stats-label">Journey Completion</div>
           </div>
         </div>
       </div>
@@ -139,21 +68,21 @@ export function StickerAlbum({ journeys, streakCount }) {
         style={{
           background: 'linear-gradient(135deg, #FFF0F3, #FFE8D6)',
           border: 'var(--border-thick)',
-          borderRadius: 26,
-          padding: 20,
+          borderRadius: 24,
+          padding: '16px 18px',
           display: 'flex',
           alignItems: 'center',
-          gap: 16,
+          gap: 14,
           boxShadow: 'var(--card-shadow)',
         }}
       >
-        <span style={{ fontSize: 36 }}>🏡</span>
+        <span style={{ fontSize: 32 }}>🏡</span>
         <div>
-          <h3 style={{ fontSize: '1.15rem', marginBottom: 4 }}>
+          <h3 style={{ fontSize: '1.1rem', marginBottom: 2 }}>
             Your Cozy Trophy Scrapbook
           </h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', fontWeight: 600 }}>
-            Every step you take, big or small, blooms into your personal story. Collect stickers by achieving checkpoints!
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.84rem', fontWeight: 600 }}>
+            Every step you take blooms into your personal story. Collect stickers by achieving checkpoints!
           </p>
         </div>
       </div>
@@ -163,14 +92,14 @@ export function StickerAlbum({ journeys, streakCount }) {
         style={{
           background: '#FFFFFF',
           border: 'var(--border-thick)',
-          borderRadius: 32,
-          padding: 24,
+          borderRadius: 28,
+          padding: 20,
           boxShadow: 'var(--card-shadow)',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <h3 style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Award size={22} color="#E65100" />
+          <h3 style={{ fontSize: '1.15rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Award size={20} color="#E65100" />
             <span>Collectible Stickers ({unlockedMap.size}/{ALL_STICKERS.length})</span>
           </h3>
         </div>
@@ -200,7 +129,7 @@ export function StickerAlbum({ journeys, streakCount }) {
                   {sticker.symbol}
                 </div>
 
-                <strong style={{ fontSize: '0.95rem', marginBottom: 4 }}>
+                <strong style={{ fontSize: '0.92rem', marginBottom: 4 }}>
                   {sticker.name}
                 </strong>
 
@@ -211,7 +140,7 @@ export function StickerAlbum({ journeys, streakCount }) {
                 {isUnlocked ? (
                   <div 
                     style={{ 
-                      marginTop: 10, 
+                      marginTop: 8, 
                       padding: '3px 8px', 
                       background: '#D4EDDA', 
                       color: '#155724', 
@@ -226,7 +155,7 @@ export function StickerAlbum({ journeys, streakCount }) {
                 ) : (
                   <div 
                     style={{ 
-                      marginTop: 10, 
+                      marginTop: 8, 
                       padding: '3px 8px', 
                       background: '#EEEEEE', 
                       color: '#757575', 
