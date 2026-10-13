@@ -1,0 +1,18 @@
+{
+  "short_name": "BloomTrail",
+  "name": "BloomTrail - Cozy Progression & Roadmap",
+  "description": "Track your personal goals, roadmap milestones, and daily habits with a cozy bubbly aesthetic. Works 100% offline and online.",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512 any"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#FFF8F0",
+  "background_color": "#FFF8F0",
+  "orientation": "portrait-primary",
+  "categories": ["productivity", "lifestyle", "utilities"]
+}
