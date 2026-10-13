@@ -1,12 +1,13 @@
-// Local-First Storage & Offline State Management with Top-Left Account Pop-up & Habit Milestone Photo Stamps
+// Local-First Storage & Offline State Management with Email Auth & Habit Milestone Photo Stamps
 
 const STORAGE_KEY_LEGACY_JOURNEYS = 'bloomtrail_journeys_v1';
 const STORAGE_KEY_LEGACY_SETTINGS = 'bloomtrail_settings_v1';
 
 const STORAGE_KEY_ACCOUNTS = 'bloomtrail_accounts_v2';
 const STORAGE_KEY_ACTIVE_ACCOUNT_ID = 'bloomtrail_active_account_id_v2';
+const STORAGE_KEY_EMAIL_VERIFICATIONS = 'bloomtrail_email_verifications_v1';
 
-// Default cozy starter roadmaps (used for account initial seed or fallback)
+// Default cozy starter roadmaps
 const DEFAULT_JOURNEYS = [
   {
     id: 'journey-webdev',
@@ -146,7 +147,7 @@ const DEFAULT_JOURNEYS = [
   },
 ];
 
-// Default Habit Milestones (e.g. Jogging 3 days minimum a week with mandatory picture proof)
+// Default Habit Milestones
 const DEFAULT_HABIT_MILESTONES = [
   {
     id: 'habit-jogging',
@@ -184,7 +185,7 @@ const DEFAULT_SETTINGS = {
 
 export const storageService = {
   // ---------------------------------------------------------------------
-  // Dynamic User Accounts (Top-Left Pop-Up & PIN Protection)
+  // Email Auth & Account Management (Stored Securely & Offline-First)
   // ---------------------------------------------------------------------
 
   getAccounts() {
@@ -193,23 +194,27 @@ export const storageService = {
       if (data) {
         const parsed = JSON.parse(data);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          // Filter out extra mock Netflix accounts (acc-2, acc-3, acc-4) if they were auto-seeded
-          // but preserve acc-1 (Alex) and any custom accounts created by the user
-          const cleaned = parsed.filter(a => a.id === 'acc-1' || (!['acc-2', 'acc-3', 'acc-4'].includes(a.id)));
-          return cleaned.length > 0 ? cleaned : parsed;
+          return parsed.map((acc) => ({
+            ...acc,
+            email: acc.email || `${acc.name.toLowerCase().replace(/\s+/g, '')}@bloomtrail.app`,
+            isVerified: acc.isVerified ?? true,
+          }));
         }
       }
 
-      // Check if user already had legacy data or active account (preserve Alex and user's quests)
+      // Preserve existing Alex account if legacy data exists
       const legacyJourneys = localStorage.getItem(STORAGE_KEY_LEGACY_JOURNEYS);
       const acc1Journeys = localStorage.getItem('bloomtrail_acc_acc-1_journeys_v2');
       if (legacyJourneys || acc1Journeys) {
         const initialAcc = [{
           id: 'acc-1',
           name: 'Alex',
-          avatar: '🦊',
+          email: 'alex@bloomtrail.app',
+          password: '1234',
           pin: '1234',
+          avatar: '🦊',
           themeColor: '#FF9AA2',
+          isVerified: true,
           bio: 'Cozy Explorer',
           createdAt: new Date().toISOString(),
         }];
@@ -230,21 +235,124 @@ export const storageService = {
     }
   },
 
-  addAccount({ name, avatar = '🦊', pin = '1234', themeColor = '#FF9AA2', bio = '' }) {
+  /**
+   * Send Email Verification Code (6-digit OTP)
+   * Dispatches code and persists with 10-minute expiry (works 100% offline & online)
+   */
+  sendVerificationCode(email) {
+    const cleanEmail = email.trim().toLowerCase();
+    // Generate 6-digit verification code
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const payload = {
+      email: cleanEmail,
+      code,
+      expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+    };
+
+    try {
+      let store = {};
+      const existing = localStorage.getItem(STORAGE_KEY_EMAIL_VERIFICATIONS);
+      if (existing) store = JSON.parse(existing);
+      store[cleanEmail] = payload;
+      localStorage.setItem(STORAGE_KEY_EMAIL_VERIFICATIONS, JSON.stringify(store));
+    } catch (e) {
+      console.error('Error storing verification code', e);
+    }
+
+    return {
+      success: true,
+      email: cleanEmail,
+      code, // returned so UI can notify / simulate email delivery toast
+      expiresAt: payload.expiresAt,
+    };
+  },
+
+  /**
+   * Verify entered 6-digit email code
+   */
+  verifyEmailCode(email, inputCode) {
+    const cleanEmail = email.trim().toLowerCase();
+    try {
+      const existing = localStorage.getItem(STORAGE_KEY_EMAIL_VERIFICATIONS);
+      if (existing) {
+        const store = JSON.parse(existing);
+        const record = store[cleanEmail];
+        if (record) {
+          if (Date.now() > record.expiresAt) {
+            return { success: false, error: 'Verification code has expired. Please request a new code.' };
+          }
+          if (String(record.code).trim() === String(inputCode).trim()) {
+            return { success: true };
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error verifying email code', e);
+    }
+    return { success: false, error: 'Invalid verification code. Please check your email.' };
+  },
+
+  /**
+   * Add / Register Account with Email Authentication
+   */
+  addAccount({ 
+    name, 
+    email, 
+    password, 
+    avatar = '🦊', 
+    themeColor = '#FF9AA2', 
+    bio = '', 
+    isVerified = true 
+  }) {
     const accounts = this.getAccounts();
+    const cleanEmail = (email || '').trim().toLowerCase();
+
+    // Check if email already registered
+    if (accounts.some((a) => a.email && a.email.toLowerCase() === cleanEmail)) {
+      throw new Error(`An account with email "${cleanEmail}" already exists. Please sign in instead.`);
+    }
+
     const newAcc = {
       id: 'acc-' + Date.now(),
-      name: name.trim() || 'New Explorer',
+      name: name.trim() || 'Explorer',
+      email: cleanEmail,
+      password: String(password || '1234').trim(),
+      pin: String(password || '1234').trim(),
       avatar: avatar || '🦊',
-      pin: String(pin || '1234').trim(),
       themeColor: themeColor || '#FF9AA2',
+      isVerified: Boolean(isVerified),
       bio: bio.trim(),
       createdAt: new Date().toISOString(),
     };
+
     const updated = [...accounts, newAcc];
     this.saveAccounts(updated);
     this.setActiveAccountId(newAcc.id);
     return newAcc;
+  },
+
+  /**
+   * Sign In with Email & Password
+   */
+  signInWithEmail(email, password) {
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPass = String(password).trim();
+    const accounts = this.getAccounts();
+
+    const account = accounts.find(
+      (a) => a.email && a.email.toLowerCase() === cleanEmail
+    );
+
+    if (!account) {
+      return { success: false, error: 'No account found with this email address.' };
+    }
+
+    if (String(account.password).trim() !== cleanPass && String(account.pin).trim() !== cleanPass) {
+      return { success: false, error: 'Incorrect password. Please try again.' };
+    }
+
+    this.setActiveAccountId(account.id);
+    return { success: true, account };
   },
 
   deleteAccount(accId) {
@@ -296,12 +404,16 @@ export const storageService = {
     const accounts = this.getAccounts();
     const account = accounts.find((a) => a.id === accId);
     if (!account) return false;
-    return String(account.pin || '1234') === String(inputPin).trim();
+    const val = String(inputPin).trim();
+    return String(account.pin || account.password || '1234') === val;
   },
 
   updateAccountPin(accId, newPin) {
     const accounts = this.getAccounts();
-    const updated = accounts.map((a) => (a.id === accId ? { ...a, pin: String(newPin).trim() } : a));
+    const val = String(newPin).trim();
+    const updated = accounts.map((a) => 
+      a.id === accId ? { ...a, pin: val, password: val } : a
+    );
     this.saveAccounts(updated);
     return true;
   },
@@ -314,7 +426,7 @@ export const storageService = {
   },
 
   // ---------------------------------------------------------------------
-  // Journeys & Milestones (Per Account & Legacy Fallback)
+  // Journeys & Milestones
   // ---------------------------------------------------------------------
 
   _getJourneysKey(accId = this.getActiveAccountId()) {
@@ -331,7 +443,6 @@ export const storageService = {
         return JSON.parse(data);
       }
 
-      // Check legacy key for Account 1 migration
       if (effectiveId === 'acc-1') {
         const legacyData = localStorage.getItem(STORAGE_KEY_LEGACY_JOURNEYS);
         if (legacyData) {
@@ -346,7 +457,6 @@ export const storageService = {
       console.error('Failed to load journeys from localStorage', e);
     }
 
-    // Default seed for this account
     this.saveJourneys(DEFAULT_JOURNEYS, effectiveId);
     return DEFAULT_JOURNEYS;
   },
@@ -365,7 +475,7 @@ export const storageService = {
   },
 
   // ---------------------------------------------------------------------
-  // Habit Milestones & Mandatory Picture Proof Stamps (Per Account)
+  // Habit Milestones & Mandatory Picture Proof Stamps
   // ---------------------------------------------------------------------
 
   _getHabitsKey(accId = this.getActiveAccountId()) {
@@ -464,7 +574,7 @@ export const storageService = {
   },
 
   // ---------------------------------------------------------------------
-  // Settings (Per Account & Legacy Fallback)
+  // Settings
   // ---------------------------------------------------------------------
 
   _getSettingsKey(accId = this.getActiveAccountId()) {

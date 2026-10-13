@@ -1,58 +1,70 @@
 import React from 'react';
-import { Plus, Lock, Sparkles } from 'lucide-react';
+import { Plus, User, LogIn, Sparkles } from 'lucide-react';
 import { soundEngine } from '../services/soundEngine';
 
 export function BlankLandingView({
+  onOpenCreateAccount,
+  onOpenSignIn,
   accounts = [],
-  onOpenAddAccount,
-  onUnlockAccount,
+  onSelectAccount,
 }) {
   return (
-    <div className="blank-landing-wrapper">
-      <div className="blank-landing-card">
-        {/* Minimal Cozy Branding */}
-        <div className="blank-landing-icon">
-          🌱
-        </div>
-        <h1 className="blank-landing-title">BloomTrail</h1>
-        <p className="blank-landing-subtitle">
+    <div className="blank-landing-screen">
+      {/* Centered Box in the middle of the screen (Matches Screenshot 2) */}
+      <div className="blank-landing-center-box">
+        <div className="blank-landing-sprout-icon">🌱</div>
+        <h1 className="blank-landing-brand-title">BloomTrail</h1>
+        <p className="blank-landing-brand-tagline">
           Cozy Progression & Milestones
         </p>
 
-        {/* Primary Action: ONLY Button Add Account */}
-        <div style={{ margin: '24px 0 16px' }}>
+        {/* The prominent button in the middle to make an account */}
+        <div style={{ marginTop: 24, marginBottom: 14 }}>
           <button
-            className="btn-bubble btn-mint btn-blank-add-account"
+            className="btn-bubble btn-mint btn-blank-center-action"
             onClick={() => {
               soundEngine.playPop();
-              onOpenAddAccount();
+              onOpenCreateAccount();
             }}
           >
             <Plus size={20} strokeWidth={2.5} />
-            <span>Add Account</span>
+            <span>Create Account</span>
           </button>
         </div>
 
-        {/* If existing accounts exist in storage, offer quick PIN unlock */}
-        {accounts.length > 0 && (
-          <div className="blank-existing-accounts-section">
-            <span className="blank-existing-accounts-label">
-              Or unlock existing profile:
-            </span>
-            <div className="blank-existing-accounts-grid">
+        {/* Sign In option */}
+        <div style={{ marginBottom: accounts.length > 0 ? 16 : 0 }}>
+          <button
+            type="button"
+            className="btn-bubble btn-cream btn-blank-signin-action"
+            onClick={() => {
+              soundEngine.playPop();
+              onOpenSignIn();
+            }}
+          >
+            <LogIn size={15} />
+            <span>Already have an account? Sign In</span>
+          </button>
+        </div>
+
+        {/* Optional quick resume if accounts exist */}
+        {accounts.length > 0 && onSelectAccount && (
+          <div className="blank-landing-existing-profiles">
+            <span className="blank-existing-hint">Or switch to existing profile:</span>
+            <div className="blank-existing-chips">
               {accounts.map((acc) => (
                 <button
                   key={acc.id}
-                  className="btn-bubble btn-cream blank-account-pill"
+                  type="button"
+                  className="blank-existing-chip"
                   onClick={() => {
                     soundEngine.playPop();
-                    onUnlockAccount(acc);
+                    onSelectAccount(acc.id);
                   }}
-                  title={`Unlock ${acc.name} (Requires PIN)`}
+                  title={`Continue as ${acc.name}`}
                 >
-                  <span style={{ fontSize: 18 }}>{acc.avatar}</span>
-                  <span style={{ fontSize: '0.85rem', fontWeight: 800 }}>{acc.name}</span>
-                  <Lock size={12} color="#E65100" />
+                  <span>{acc.avatar || '🦊'}</span>
+                  <span>{acc.name}</span>
                 </button>
               ))}
             </div>

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   X, Bell, Volume2, Play, Square, Download, Upload, 
   Smartphone, Monitor, Sparkles, Check, RefreshCw, 
-  Music, Video, Radio, FileAudio, ExternalLink
+  Music, Video, Radio, FileAudio, ExternalLink,
+  User, Lock, Plus
 } from 'lucide-react';
 import { soundEngine, extractYouTubeId } from '../services/soundEngine';
 import { notificationService } from '../services/notificationService';
@@ -21,6 +22,11 @@ export function SettingsModal({
   onUpdateSettings,
   onClose,
   onDataImported,
+  activeAccount,
+  accounts = [],
+  onSelectAccount,
+  onOpenCreateAccount,
+  onSignOut,
 }) {
   // Ringtone config: { type: 'synth'|'youtube'|'custom_file'|'audio_url', synthKey, youtubeUrl, customFileName, audioUrl }
   const [ringtoneType, setRingtoneType] = useState(settings.ringtoneConfig?.type || 'synth');
@@ -163,12 +169,166 @@ export function SettingsModal({
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 24 }}>🎶</span>
-            <h2 style={{ fontSize: '1.25rem' }}>Alarm & Audio Settings</h2>
+            <span style={{ fontSize: 24 }}>⚙️</span>
+            <div>
+              <h2 style={{ fontSize: '1.25rem', lineHeight: 1.2 }}>Settings & Profile</h2>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700 }}>
+                Manage account, alarm sounds, audio & backups
+              </p>
+            </div>
           </div>
           <button className="btn-icon-bubble" onClick={onClose}>
             <X size={18} />
           </button>
+        </div>
+
+        {/* 0. ACCOUNT & PROFILE MIGRATED SECTION */}
+        <div 
+          className="settings-account-card"
+          style={{
+            background: '#FFFDF9',
+            border: '2px solid var(--border-color)',
+            borderRadius: 20,
+            padding: '16px',
+            marginBottom: 20,
+            boxShadow: '0 3px 0 var(--border-color)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <User size={18} color="#4A3E3D" />
+              <strong style={{ fontSize: '0.95rem' }}>Active Account</strong>
+            </div>
+            {activeAccount?.isVerified && (
+              <span 
+                style={{
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  padding: '3px 8px',
+                  borderRadius: 8,
+                  background: '#E8F5E9',
+                  color: '#2E7D32',
+                  border: '1.5px solid #81C784',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 4,
+                }}
+              >
+                <Check size={12} strokeWidth={3} />
+                Verified Email
+              </span>
+            )}
+          </div>
+
+          {activeAccount ? (
+            <div 
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                background: '#FFFFFF',
+                border: '2px solid var(--border-color)',
+                borderRadius: 16,
+                padding: '12px 14px',
+                marginBottom: 12,
+              }}
+            >
+              <div 
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: '50%',
+                  background: activeAccount.themeColor || 'var(--pastel-peach)',
+                  border: '2px solid var(--border-color)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 22,
+                  flexShrink: 0,
+                }}
+              >
+                {activeAccount.avatar || '🦊'}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontWeight: 800, fontSize: '0.98rem', color: 'var(--text-main)' }}>
+                  {activeAccount.name}
+                </div>
+                <div 
+                  style={{ 
+                    fontSize: '0.78rem', 
+                    color: 'var(--text-muted)', 
+                    fontWeight: 600, 
+                    overflow: 'hidden', 
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {activeAccount.email || 'offline-local@bloomtrail.app'}
+                </div>
+              </div>
+              {onSignOut && (
+                <button
+                  type="button"
+                  className="btn-bubble btn-cream"
+                  style={{ padding: '6px 10px', fontSize: '0.75rem', gap: 4 }}
+                  onClick={() => {
+                    soundEngine.playPop();
+                    onSignOut();
+                  }}
+                  title="Lock profile and return to welcome screen"
+                >
+                  <Lock size={12} />
+                  <span>Sign Out</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <div style={{ marginBottom: 12, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+              No account currently active.
+            </div>
+          )}
+
+          {/* Switch to another account */}
+          {accounts.length > 1 && onSelectAccount && (
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontSize: '0.76rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+                Switch Profile:
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {accounts.filter((a) => a.id !== activeAccount?.id).map((other) => (
+                  <button
+                    key={other.id}
+                    type="button"
+                    className="btn-bubble btn-cream"
+                    style={{ padding: '5px 10px', fontSize: '0.78rem' }}
+                    onClick={() => {
+                      soundEngine.playPop();
+                      onSelectAccount(other.id);
+                    }}
+                  >
+                    <span>{other.avatar || '🐼'}</span>
+                    <span>{other.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Add Another Account (Email Auth) */}
+          {onOpenCreateAccount && (
+            <button
+              type="button"
+              className="btn-bubble btn-mint"
+              style={{ width: '100%', padding: '9px 12px', fontSize: '0.82rem' }}
+              onClick={() => {
+                soundEngine.playPop();
+                onOpenCreateAccount();
+              }}
+            >
+              <Plus size={14} />
+              <span>Add Another Account (Email Auth)</span>
+            </button>
+          )}
         </div>
 
         {/* 1. CUSTOM RINGTONE SOURCE SELECTOR */}

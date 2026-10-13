@@ -422,6 +422,51 @@ assert(newCustomCheckpoint.description === '', 'Newly created checkpoint descrip
 assert(Array.isArray(newCustomCheckpoint.subtasks) && newCustomCheckpoint.subtasks.length === 0, 'Newly created subtasks checklist is empty');
 
 // ---------------------------------------------------------------------
+// TEST SUITE 10: Email Authentication & 6-Digit Verification Flow Contract
+// ---------------------------------------------------------------------
+console.log('\n✉️ Test Suite 10: Email Auth & 6-Digit Verification Flow Contract');
+
+const testEmail = 'explorer@bloomtrail.app';
+const dispatchRes = storageService.sendVerificationCode(testEmail);
+
+assert(dispatchRes.success === true, 'Verification code dispatch succeeds offline/online');
+assert(typeof dispatchRes.code === 'string' && dispatchRes.code.length === 6, 'Verification code is 6-digit string');
+assert(/^\d{6}$/.test(dispatchRes.code), 'Verification code consists only of numeric digits');
+
+// Testing wrong code rejection
+const wrongVerifyRes = storageService.verifyEmailCode(testEmail, '000000');
+assert(wrongVerifyRes.success === false, 'Invalid verification code is rejected');
+
+// Testing correct code verification
+const correctVerifyRes = storageService.verifyEmailCode(testEmail, dispatchRes.code);
+assert(correctVerifyRes.success === true, 'Correct verification code is successfully validated');
+
+// Testing account creation with email & verification
+const registeredEmailAcc = storageService.addAccount({
+  name: 'Email Explorer',
+  email: testEmail,
+  password: 'securePass123',
+  avatar: '🌸',
+  isVerified: true,
+});
+assert(Boolean(registeredEmailAcc && registeredEmailAcc.id), 'Account successfully created with email auth');
+assert(registeredEmailAcc.email === testEmail, 'Account email is correctly stored');
+assert(registeredEmailAcc.isVerified === true, 'Account is stamped as verified');
+
+// Testing Sign In with correct email and password
+const signInSuccess = storageService.signInWithEmail(testEmail, 'securePass123');
+assert(signInSuccess.success === true, 'Sign in succeeds with correct email and password');
+assert(signInSuccess.account.id === registeredEmailAcc.id, 'Sign in returns correct account');
+
+// Testing Sign In with wrong password
+const signInFailPass = storageService.signInWithEmail(testEmail, 'wrongPassword');
+assert(signInFailPass.success === false, 'Sign in fails with wrong password');
+
+// Testing Sign In with non-existent email
+const signInFailEmail = storageService.signInWithEmail('nonexistent@example.com', 'securePass123');
+assert(signInFailEmail.success === false, 'Sign in fails with non-existent email');
+
+// ---------------------------------------------------------------------
 // TEST SUMMARY REPORT
 // ---------------------------------------------------------------------
 

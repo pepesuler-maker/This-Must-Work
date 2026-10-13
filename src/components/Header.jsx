@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Wifi, WifiOff, Volume2, VolumeX, Settings, Download, Flame } from 'lucide-react';
 import { soundEngine } from '../services/soundEngine';
-import { AccountTopLeftPopup } from './AccountTopLeftPopup';
 
 export function Header({
   isOnline,
@@ -9,16 +8,9 @@ export function Header({
   onOpenSettings,
   soundEnabled,
   onToggleSound,
-  activeAccount,
-  accounts = [],
-  onSelectAccountPrompt,
-  onOpenAddAccount,
-  onOpenEditProfile,
-  onLockSession,
 }) {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
-  const [isAccountPopupOpen, setIsAccountPopupOpen] = useState(false);
 
   useEffect(() => {
     // Listen for PWA installation prompt
@@ -49,33 +41,17 @@ export function Header({
   return (
     <header className="header-container">
       <div className="header-main-row">
-        {/* Top-Left: Account Pop-up with Good Placement */}
-        <div className="header-left-slot">
-          {activeAccount && (
-            <AccountTopLeftPopup
-              activeAccount={activeAccount}
-              accounts={accounts}
-              isOpen={isAccountPopupOpen}
-              onToggle={() => setIsAccountPopupOpen(!isAccountPopupOpen)}
-              onClose={() => setIsAccountPopupOpen(false)}
-              onSelectAccountPrompt={onSelectAccountPrompt}
-              onOpenAddAccount={onOpenAddAccount}
-              onOpenEditProfile={onOpenEditProfile}
-              onLockSession={onLockSession}
-            />
-          )}
-        </div>
-
-        {/* Center: Cozy App Title */}
-        <div className="header-center-slot">
-          <div className="logo-center-group">
-            <span className="logo-mini-bubble">🌱</span>
-            <span className="logo-title-text">BloomTrail</span>
+        {/* Clean Logo Section on the Left */}
+        <div className="logo-section">
+          <div className="logo-icon-bubble">🌱</div>
+          <div className="logo-text">
+            <h1>BloomTrail</h1>
+            <p className="logo-tagline">Cozy Progression & Milestones</p>
           </div>
         </div>
 
-        {/* Top-Right: Controls (Install, Sound, Settings) */}
-        <div className="header-right-slot">
+        {/* Quick controls on the Right */}
+        <div className="header-quick-controls">
           {installPrompt && !isInstalled && (
             <button 
               className="btn-bubble btn-mint btn-install-mini"
@@ -99,7 +75,7 @@ export function Header({
             {soundEnabled ? <Volume2 size={17} /> : <VolumeX size={17} />}
           </button>
 
-          {/* Settings Button (Desktop) */}
+          {/* Settings Button (Desktop header) */}
           <button
             className="btn-icon-bubble desktop-only-btn"
             onClick={() => {
@@ -113,7 +89,7 @@ export function Header({
         </div>
       </div>
 
-      {/* Badges Row (Streak + Online Status Only, NO Duplicates!) */}
+      {/* Badges Row (Streak + Online Status) */}
       <div className="header-badges-row">
         <div className="badge-pill badge-streak" title="Daily Check-in Streak!">
           <Flame size={14} fill="#FF8A00" color="#B23A00" />

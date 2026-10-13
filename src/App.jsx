@@ -10,6 +10,7 @@ import { StickerAlbum } from './components/StickerAlbum';
 import { HabitMilestonesView } from './components/HabitMilestonesView';
 import { AccountProfileModal } from './components/AccountProfileModal';
 import { BlankLandingView } from './components/BlankLandingView';
+import { EmailAuthModal } from './components/EmailAuthModal';
 import { MilestoneModal } from './components/MilestoneModal';
 import { SettingsModal } from './components/SettingsModal';
 import { NewJourneyModal } from './components/NewJourneyModal';
@@ -26,6 +27,10 @@ export default function App() {
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [accountModalMode, setAccountModalMode] = useState('add_account'); // 'add_account' | 'enter_pin' | 'edit_profile' | 'change_pin'
   const [targetAccountForPin, setTargetAccountForPin] = useState(null);
+
+  // Email Auth Modal (Email registration with 6-digit verification code & sign in)
+  const [isEmailAuthModalOpen, setIsEmailAuthModalOpen] = useState(false);
+  const [emailAuthMode, setEmailAuthMode] = useState('signup'); // 'signup' | 'signin'
 
   // Per-account data
   const [journeys, setJourneys] = useState(() => storageService.loadJourneys(activeAccountId));
@@ -306,32 +311,33 @@ export default function App() {
     setActiveJourneyId(newJourney.id);
   };
 
-  // If no account exists or active account is locked, render almost blank page with ONLY "Add Account" button
+  // If no account exists or active account is locked, render clean blank page with centered Create Account button
   if (!activeAccount || accounts.length === 0) {
     return (
       <div className="app-wrapper">
         <BlankLandingView
           accounts={accounts}
-          onOpenAddAccount={() => {
-            setAccountModalMode('add_account');
-            setIsAccountModalOpen(true);
+          onOpenCreateAccount={() => {
+            setEmailAuthMode('signup');
+            setIsEmailAuthModalOpen(true);
           }}
-          onUnlockAccount={(acc) => {
-            setTargetAccountForPin(acc);
-            setAccountModalMode('enter_pin');
-            setIsAccountModalOpen(true);
+          onOpenSignIn={() => {
+            setEmailAuthMode('signin');
+            setIsEmailAuthModalOpen(true);
           }}
+          onSelectAccount={(accId) => handleSelectAccount(accId)}
         />
 
-        {isAccountModalOpen && (
-          <AccountProfileModal
-            accounts={accounts}
-            activeAccountId={activeAccountId}
-            initialMode={accountModalMode}
-            targetAccountForPin={targetAccountForPin}
-            onSelectAccount={handleSelectAccount}
-            onAccountCreated={handleAccountCreated}
-            onClose={() => setIsAccountModalOpen(false)}
+        {isEmailAuthModalOpen && (
+          <EmailAuthModal
+            initialMode={emailAuthMode}
+            onSuccess={(newAcc) => {
+              const freshAccounts = storageService.getAccounts();
+              setAccounts(freshAccounts);
+              handleSelectAccount(newAcc.id);
+              setIsEmailAuthModalOpen(false);
+            }}
+            onClose={() => setIsEmailAuthModalOpen(false)}
           />
         )}
       </div>
@@ -340,7 +346,7 @@ export default function App() {
 
   return (
     <div className="app-wrapper">
-      {/* App Header with Top-Left Account Pop-up with Good Placement */}
+      {/* Clean App Header: Logo on left, Quick controls on right (sound/install/settings), Badges row (streak/online). Account icon completely migrated into Settings */}
       <Header
         isOnline={isOnline}
         streakCount={settings.streakCount || 1}
@@ -351,26 +357,6 @@ export default function App() {
           storageService.saveSettings(updated, activeAccountId);
         }}
         onOpenSettings={() => setIsSettingsOpen(true)}
-        activeAccount={activeAccount}
-        accounts={accounts}
-        onSelectAccountPrompt={(acc) => {
-          setTargetAccountForPin(acc);
-          setAccountModalMode('enter_pin');
-          setIsAccountModalOpen(true);
-        }}
-        onOpenAddAccount={() => {
-          setAccountModalMode('add_account');
-          setIsAccountModalOpen(true);
-        }}
-        onOpenEditProfile={() => {
-          setTargetAccountForPin(activeAccount);
-          setAccountModalMode('edit_profile');
-          setIsAccountModalOpen(true);
-        }}
-        onLockSession={() => {
-          storageService.setActiveAccountId(null);
-          setActiveAccountId(null);
-        }}
       />
 
       {/* Main View Tabs (Desktop & Tablet) */}
@@ -581,10 +567,23 @@ export default function App() {
         />
       )}
 
-      {/* Settings Modal */}
+      {/* Settings Modal with Account & Profiles migrated */}
       {isSettingsOpen && (
         <SettingsModal
           settings={settings}
+          activeAccount={activeAccount}
+          accounts={accounts}
+          onSelectAccount={(newAccId) => handleSelectAccount(newAccId)}
+          onOpenCreateAccount={() => {
+            setIsSettingsOpen(false);
+            setEmailAuthMode('signup');
+            setIsEmailAuthModalOpen(true);
+          }}
+          onSignOut={() => {
+            storageService.setActiveAccountId(null);
+            setActiveAccountId(null);
+            setIsSettingsOpen(false);
+          }}
           onClose={() => setIsSettingsOpen(false)}
           onUpdateSettings={(updated) => {
             setSettings(updated);
@@ -595,6 +594,20 @@ export default function App() {
             setHabits(storageService.loadHabitMilestones(activeAccountId));
             setSettings(storageService.loadSettings(activeAccountId));
           }}
+        />
+      )}
+
+      {/* Email Auth Modal (Invoked from Settings "Add Another Account") */}
+      {isEmailAuthModalOpen && (
+        <EmailAuthModal
+          initialMode={emailAuthMode}
+          onSuccess={(newAcc) => {
+            const freshAccounts = storageService.getAccounts();
+            setAccounts(freshAccounts);
+            handleSelectAccount(newAcc.id);
+            setIsEmailAuthModalOpen(false);
+          }}
+          onClose={() => setIsEmailAuthModalOpen(false)}
         />
       )}
 
