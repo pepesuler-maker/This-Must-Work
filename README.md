@@ -15,8 +15,11 @@
   - In-app monthly calendar view plotting scheduled milestones.
   - 1-click **Add to Google Calendar** link.
   - Standard **iCalendar (.ics)** download to sync with Apple Calendar, Outlook, and Google Calendar.
-- 🔔 **Offline Web Audio Ringtones & Notifications**:
-  - 4 cozy synthesized ringtones (Morning Bell, Cozy Marimba, Bubble Harp, Stardust Fanfare) generated live with Web Audio API.
+- 🔔 **Custom Alarm Ringtones (100% Free & Offline-Ready)**:
+  - 📺 **YouTube Songs/Videos**: Paste any YouTube music or lofi link to play as your alarm (completely free, no Spotify Premium required!).
+  - 📁 **Custom Audio File Upload**: Upload your own MP3, WAV, or M4A songs stored directly in browser IndexedDB for offline alarms.
+  - 🔔 **4 Built-in Synthesized Chimes**: Morning Bell, Cozy Marimba, Bubble Harp, and Stardust Fanfare generated via Web Audio API.
+  - 🌐 **Direct Audio URL**: Stream any direct MP3 audio link.
   - Native Web Notifications and device vibration alarms.
 - 🏆 **Sticker Album Scrapbook**: Collect cute achievement stickers as you conquer milestones and build daily streaks.
 - 📱 **100% Offline & Online PWA**:

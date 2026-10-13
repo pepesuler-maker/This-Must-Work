@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  X, Bell, Volume2, Play, Download, Upload, 
-  Smartphone, Monitor, Sparkles, Check, RefreshCw 
+  X, Bell, Volume2, Play, Square, Download, Upload, 
+  Smartphone, Monitor, Sparkles, Check, RefreshCw, 
+  Music, Video, Radio, FileAudio, ExternalLink
 } from 'lucide-react';
-import { soundEngine } from '../services/soundEngine';
+import { soundEngine, extractYouTubeId } from '../services/soundEngine';
 import { notificationService } from '../services/notificationService';
 import { storageService } from '../services/storageService';
+import { saveCustomAudioFile, getCustomAudioFile } from '../services/audioStorage';
 
-const RINGTONES = [
+const SYNTH_RINGTONES = [
   { id: 'morning_bell', name: '🔔 Morning Bell', desc: 'Warm tubular bell chimes' },
   { id: 'cozy_marimba', name: '🪵 Cozy Marimba', desc: 'Playful wooden xylophone melody' },
   { id: 'bubble_harp', name: '🫧 Bubble Harp', desc: 'Gentle harp pluck arpeggios' },
@@ -20,29 +22,83 @@ export function SettingsModal({
   onClose,
   onDataImported,
 }) {
-  const [selectedRingtone, setSelectedRingtone] = useState(settings.ringtone || 'morning_bell');
+  // Ringtone config: { type: 'synth'|'youtube'|'custom_file'|'audio_url', synthKey, youtubeUrl, customFileName, audioUrl }
+  const [ringtoneType, setRingtoneType] = useState(settings.ringtoneConfig?.type || 'synth');
+  const [synthKey, setSynthKey] = useState(settings.ringtoneConfig?.synthKey || settings.ringtone || 'morning_bell');
+  const [youtubeUrl, setYoutubeUrl] = useState(settings.ringtoneConfig?.youtubeUrl || 'https://www.youtube.com/watch?v=jfKfPfyJRdk'); // lofi hip hop sample
+  const [customFileName, setCustomFileName] = useState(settings.ringtoneConfig?.customFileName || '');
+  const [audioUrl, setAudioUrl] = useState(settings.ringtoneConfig?.audioUrl || '');
+  
   const [volume, setVolume] = useState(settings.volume ?? 0.8);
   const [soundEffects, setSoundEffects] = useState(settings.soundEffects ?? true);
   const [syncCode, setSyncCode] = useState(settings.syncCode || 'BLOOM-7788');
   const [notifStatus, setNotifStatus] = useState(notificationService.getPermissionStatus());
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
   const [syncSuccessMsg, setSyncSuccessMsg] = useState('');
 
-  // Handle ringtone preview
-  const handlePreviewRingtone = (ringtoneId, e) => {
-    e.stopPropagation();
-    soundEngine.playRingtone(ringtoneId);
+  // Check if custom audio already exists in IndexedDB
+  useEffect(() => {
+    getCustomAudioFile('default_custom_audio').then((res) => {
+      if (res && res.name) {
+        setCustomFileName(res.name);
+      }
+    });
+  }, []);
+
+  // Stop preview on unmount
+  useEffect(() => {
+    return () => {
+      soundEngine.stopAlarmLoop();
+    };
+  }, []);
+
+  // Handle custom audio file upload
+  const handleAudioFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    soundEngine.playPop();
+    await saveCustomAudioFile('default_custom_audio', file, file.name);
+    setCustomFileName(file.name);
+    setRingtoneType('custom_file');
+    alert(`"${file.name}" saved as your custom ringtone! Works 100% offline.`);
   };
 
-  // Test full alarm notification
+  // Preview current ringtone
+  const handleTogglePreview = () => {
+    if (isPlayingPreview) {
+      soundEngine.stopAlarmLoop();
+      setIsPlayingPreview(false);
+      return;
+    }
+
+    setIsPlayingPreview(true);
+    if (ringtoneType === 'synth') {
+      soundEngine.playRingtone(synthKey);
+    } else if (ringtoneType === 'custom_file') {
+      soundEngine.playCustomAudioFile();
+    } else if (ringtoneType === 'audio_url') {
+      soundEngine.playAudioUrl(audioUrl);
+    }
+    // YouTube preview handles itself via iframe below
+  };
+
+  // Test full alarm with alert modal
   const handleTestAlarm = () => {
     soundEngine.playPop();
     notificationService.triggerReminder({
       milestone: {
         id: 'test-ms',
-        title: 'Cozy Test Reminder ✨',
+        title: 'Alarm Ringtone Test 🎶',
       },
-      journeyTitle: 'BloomTrail Test',
-      ringtone: selectedRingtone,
+      journeyTitle: 'BloomTrail Audio',
+      ringtoneConfig: {
+        type: ringtoneType,
+        synthKey,
+        youtubeUrl,
+        customFileName,
+        audioUrl,
+      },
     });
   };
 
@@ -56,13 +112,23 @@ export function SettingsModal({
   // Save settings
   const handleSaveSettings = () => {
     soundEngine.playPop();
+    const ringtoneConfig = {
+      type: ringtoneType,
+      synthKey,
+      youtubeUrl,
+      customFileName,
+      audioUrl,
+    };
+
     const updated = {
       ...settings,
-      ringtone: selectedRingtone,
+      ringtone: synthKey,
+      ringtoneConfig,
       volume,
       soundEffects,
       syncCode,
     };
+
     soundEngine.setVolume(volume);
     soundEngine.toggleSound(soundEffects);
     onUpdateSettings(updated);
@@ -90,66 +156,200 @@ export function SettingsModal({
     reader.readAsText(file);
   };
 
+  const parsedYtId = extractYouTubeId(youtubeUrl);
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 24 }}>⚙️</span>
-            <h2 style={{ fontSize: '1.25rem' }}>Settings & Reminders</h2>
+            <span style={{ fontSize: 24 }}>🎶</span>
+            <h2 style={{ fontSize: '1.25rem' }}>Alarm & Audio Settings</h2>
           </div>
           <button className="btn-icon-bubble" onClick={onClose}>
             <X size={18} />
           </button>
         </div>
 
-        {/* 1. RINGTONE AUDIO SELECTION */}
-        <div style={{ marginBottom: 24 }}>
+        {/* 1. CUSTOM RINGTONE SOURCE SELECTOR */}
+        <div style={{ marginBottom: 20 }}>
           <label style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-main)', display: 'block', marginBottom: 6 }}>
-            🎶 Choose Your Reminder Ringtone
+            🎵 Select Alarm Ringtone Source
           </label>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 10 }}>
-            Synthesized live with Web Audio API. Always works 100% offline with zero audio delay.
-          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
+            {[
+              { type: 'synth', label: '🔔 Built-in Chimes', sub: '100% Offline synth' },
+              { type: 'youtube', label: '📺 YouTube Song', sub: 'Free video / music' },
+              { type: 'custom_file', label: '📁 Upload File (MP3)', sub: 'From phone/PC offline' },
+              { type: 'audio_url', label: '🌐 Direct Audio URL', sub: 'Streaming link' },
+            ].map((tab) => (
+              <button
+                key={tab.type}
+                type="button"
+                className={`btn-bubble ${ringtoneType === tab.type ? 'btn-peach' : 'btn-cream'}`}
+                style={{ padding: '8px 10px', fontSize: '0.82rem', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' }}
+                onClick={() => {
+                  soundEngine.playPop();
+                  soundEngine.stopAlarmLoop();
+                  setIsPlayingPreview(false);
+                  setRingtoneType(tab.type);
+                }}
+              >
+                <strong style={{ fontSize: '0.85rem' }}>{tab.label}</strong>
+                <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{tab.sub}</span>
+              </button>
+            ))}
+          </div>
 
-          <div className="ringtone-grid">
-            {RINGTONES.map((rt) => {
-              const isSelected = selectedRingtone === rt.id;
-              return (
-                <div
-                  key={rt.id}
-                  className={`ringtone-card ${isSelected ? 'selected' : ''}`}
-                  onClick={() => {
-                    setSelectedRingtone(rt.id);
-                    soundEngine.playRingtone(rt.id);
-                  }}
-                >
-                  <div>
-                    <strong style={{ fontSize: '0.88rem', display: 'block' }}>{rt.name}</strong>
-                    <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{rt.desc}</span>
+          {/* TAB CONTENT A: SYNTH CHIMES */}
+          {ringtoneType === 'synth' && (
+            <div className="ringtone-grid">
+              {SYNTH_RINGTONES.map((rt) => {
+                const isSelected = synthKey === rt.id;
+                return (
+                  <div
+                    key={rt.id}
+                    className={`ringtone-card ${isSelected ? 'selected' : ''}`}
+                    onClick={() => {
+                      setSynthKey(rt.id);
+                      soundEngine.playRingtone(rt.id);
+                    }}
+                  >
+                    <div>
+                      <strong style={{ fontSize: '0.88rem', display: 'block' }}>{rt.name}</strong>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{rt.desc}</span>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="btn-icon-bubble"
+                      style={{ width: 32, height: 32 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        soundEngine.playRingtone(rt.id);
+                      }}
+                      title="Preview sound"
+                    >
+                      <Play size={12} fill="currentColor" />
+                    </button>
                   </div>
+                );
+              })}
+            </div>
+          )}
 
+          {/* TAB CONTENT B: YOUTUBE MUSIC */}
+          {ringtoneType === 'youtube' && (
+            <div style={{ background: '#FFF8F2', padding: 14, borderRadius: 18, border: '2px solid var(--border-color)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <Video size={16} color="#E65100" />
+                <strong style={{ fontSize: '0.88rem' }}>Paste Any YouTube Music Link</strong>
+              </div>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 10 }}>
+                100% Free! You can use any song, soundtrack, or lofi beat from YouTube as your alarm ringtone.
+              </p>
+              <input
+                className="input-bubble"
+                value={youtubeUrl}
+                onChange={(e) => setYoutubeUrl(e.target.value)}
+                placeholder="https://www.youtube.com/watch?v=..."
+                style={{ padding: '8px 12px', fontSize: '0.85rem', marginBottom: 10 }}
+              />
+
+              {parsedYtId ? (
+                <div style={{ borderRadius: 14, overflow: 'hidden', border: '1.5px solid var(--border-color)', marginTop: 8 }}>
+                  <iframe
+                    width="100%"
+                    height="160"
+                    src={`https://www.youtube-nocookie.com/embed/${parsedYtId}?enablejsapi=1`}
+                    title="YouTube Preview"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  />
+                </div>
+              ) : (
+                <p style={{ fontSize: '0.75rem', color: '#C62828', fontWeight: 700 }}>
+                  Please paste a valid YouTube video URL.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* TAB CONTENT C: CUSTOM AUDIO FILE (OFFLINE) */}
+          {ringtoneType === 'custom_file' && (
+            <div style={{ background: '#FFF8F2', padding: 14, borderRadius: 18, border: '2px solid var(--border-color)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <FileAudio size={16} color="#E65100" />
+                <strong style={{ fontSize: '0.88rem' }}>Upload Audio File (MP3, WAV, M4A)</strong>
+              </div>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: 10 }}>
+                Saved locally inside your browser (IndexedDB). Plays as your alarm even completely offline!
+              </p>
+
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                <label className="btn-bubble btn-mint" style={{ padding: '8px 14px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                  <Upload size={14} />
+                  <span>Choose Sound File</span>
+                  <input type="file" accept="audio/*" onChange={handleAudioFileUpload} style={{ display: 'none' }} />
+                </label>
+
+                {customFileName && (
                   <button
                     type="button"
-                    className="btn-icon-bubble"
-                    style={{ width: 34, height: 34 }}
-                    onClick={(e) => handlePreviewRingtone(rt.id, e)}
-                    title="Preview sound"
+                    className="btn-bubble btn-cream"
+                    style={{ padding: '8px 14px', fontSize: '0.85rem' }}
+                    onClick={handleTogglePreview}
                   >
-                    <Play size={13} fill="currentColor" />
+                    {isPlayingPreview ? <Square size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" />}
+                    <span>{isPlayingPreview ? 'Stop' : 'Play Song'}</span>
                   </button>
-                </div>
-              );
-            })}
-          </div>
+                )}
+              </div>
+
+              {customFileName && (
+                <p style={{ fontSize: '0.8rem', fontWeight: 800, color: '#2E7D32', marginTop: 8 }}>
+                  🎵 Current file: {customFileName}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* TAB CONTENT D: DIRECT AUDIO URL */}
+          {ringtoneType === 'audio_url' && (
+            <div style={{ background: '#FFF8F2', padding: 14, borderRadius: 18, border: '2px solid var(--border-color)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <Radio size={16} color="#E65100" />
+                <strong style={{ fontSize: '0.88rem' }}>Direct Audio Stream / MP3 URL</strong>
+              </div>
+              <input
+                className="input-bubble"
+                value={audioUrl}
+                onChange={(e) => setAudioUrl(e.target.value)}
+                placeholder="https://example.com/audio/alarm.mp3"
+                style={{ padding: '8px 12px', fontSize: '0.85rem', marginBottom: 10 }}
+              />
+              {audioUrl && (
+                <button
+                  type="button"
+                  className="btn-bubble btn-cream"
+                  style={{ padding: '8px 14px', fontSize: '0.85rem' }}
+                  onClick={handleTogglePreview}
+                >
+                  {isPlayingPreview ? <Square size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" />}
+                  <span>{isPlayingPreview ? 'Stop Preview' : 'Test Audio URL'}</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* 2. NOTIFICATIONS & ALARM TEST */}
-        <div style={{ background: '#FFF8F2', padding: 16, borderRadius: 22, border: '2px solid var(--border-color)', marginBottom: 24 }}>
+        <div style={{ background: '#FFFDF9', padding: 16, borderRadius: 22, border: '2px solid var(--border-color)', marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <Bell size={18} color="#E65100" />
-              <strong style={{ fontSize: '0.92rem' }}>Web Push & Reminder Notifications</strong>
+              <strong style={{ fontSize: '0.92rem' }}>Alarm Reminders & Web Push</strong>
             </div>
             <span 
               style={{
@@ -166,10 +366,6 @@ export function SettingsModal({
             </span>
           </div>
 
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 12 }}>
-            Receive native alerts and custom chime ringtones for your scheduled checkpoints on desktop and mobile.
-          </p>
-
           <div style={{ display: 'flex', gap: 8 }}>
             {notifStatus !== 'granted' && (
               <button
@@ -179,27 +375,27 @@ export function SettingsModal({
                 onClick={handleRequestNotif}
               >
                 <Bell size={14} />
-                <span>Allow Notifications</span>
+                <span>Allow Push Notifications</span>
               </button>
             )}
 
             <button
               type="button"
-              className="btn-bubble btn-cream"
+              className="btn-bubble btn-peach"
               style={{ flex: 1, padding: '8px 12px', fontSize: '0.82rem' }}
               onClick={handleTestAlarm}
             >
               <Play size={14} />
-              <span>Test Alarm & Ringtone</span>
+              <span>Test Alarm Pop-up & Ringtone</span>
             </button>
           </div>
         </div>
 
         {/* 3. SOUND VOLUME & EFFECTS */}
-        <div style={{ marginBottom: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-            <label style={{ fontWeight: 800, fontSize: '0.9rem' }}>
-              🔊 Sound Effects & Volume
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+            <label style={{ fontWeight: 800, fontSize: '0.88rem' }}>
+              🔊 Volume Control
             </label>
             <span style={{ fontSize: '0.82rem', fontWeight: 700 }}>
               {Math.round(volume * 100)}%
@@ -217,7 +413,7 @@ export function SettingsModal({
               setVolume(v);
               soundEngine.setVolume(v);
             }}
-            style={{ width: '100%', accentColor: 'var(--pastel-coral)', marginBottom: 12 }}
+            style={{ width: '100%', accentColor: 'var(--pastel-coral)', marginBottom: 10 }}
           />
 
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem' }}>
@@ -231,60 +427,55 @@ export function SettingsModal({
               }}
               style={{ width: 18, height: 18, accentColor: '#388E3C' }}
             />
-            <span>Enable cozy button pops and celebration fanfares</span>
+            <span>Enable button pops and celebration sound effects</span>
           </label>
         </div>
 
-        {/* 4. CROSS-DEVICE SYNC & DATA BACKUP */}
-        <div style={{ background: '#F5F9FA', padding: 16, borderRadius: 22, border: '2px solid var(--border-color)', marginBottom: 20 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <RefreshCw size={18} color="#00838F" />
-            <strong style={{ fontSize: '0.92rem' }}>Offline-First & Device Sync</strong>
+        {/* 4. BACKUP & SYNC */}
+        <div style={{ background: '#F5F9FA', padding: 14, borderRadius: 20, border: '2px solid var(--border-color)', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <RefreshCw size={16} color="#00838F" />
+            <strong style={{ fontSize: '0.88rem' }}>Offline Backup & Device Sync</strong>
           </div>
 
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 12 }}>
-            Your data is stored locally on this device so it works 100% offline. Transfer or sync between desktop and phone using your sync code or JSON backup.
-          </p>
-
-          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
             <button
               type="button"
               className="btn-bubble btn-cream"
-              style={{ flex: 1, padding: '8px 12px', fontSize: '0.82rem' }}
+              style={{ flex: 1, padding: '7px 10px', fontSize: '0.78rem' }}
               onClick={() => {
                 soundEngine.playPop();
                 storageService.exportJSONBackup();
               }}
             >
-              <Download size={14} />
+              <Download size={13} />
               <span>Export Backup (.json)</span>
             </button>
 
             <label
               className="btn-bubble btn-cream"
-              style={{ flex: 1, padding: '8px 12px', fontSize: '0.82rem', cursor: 'pointer' }}
+              style={{ flex: 1, padding: '7px 10px', fontSize: '0.78rem', cursor: 'pointer' }}
             >
-              <Upload size={14} />
+              <Upload size={13} />
               <span>Import Backup</span>
               <input type="file" accept=".json" onChange={handleFileImport} style={{ display: 'none' }} />
             </label>
           </div>
 
-          {/* Sync Code Pill */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <label style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-              Your Sync Code:
+              Sync Code:
             </label>
             <input
               className="input-bubble"
-              style={{ padding: '6px 12px', fontSize: '0.85rem', fontWeight: 800, textTransform: 'uppercase' }}
+              style={{ padding: '6px 10px', fontSize: '0.82rem', fontWeight: 800, textTransform: 'uppercase' }}
               value={syncCode}
               onChange={(e) => setSyncCode(e.target.value.toUpperCase())}
             />
           </div>
 
           {syncSuccessMsg && (
-            <p style={{ marginTop: 8, color: '#2E7D32', fontSize: '0.8rem', fontWeight: 800 }}>
+            <p style={{ marginTop: 6, color: '#2E7D32', fontSize: '0.78rem', fontWeight: 800 }}>
               ✨ {syncSuccessMsg}
             </p>
           )}

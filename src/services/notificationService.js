@@ -36,15 +36,24 @@ class NotificationService {
   }
 
   // Trigger notification + ringtone + vibration
-  triggerReminder({ milestone, journeyTitle, ringtone = 'morning_bell' }) {
+  triggerReminder({ milestone, journeyTitle, ringtoneConfig }) {
     const title = `🌸 Reminder: ${milestone.title}`;
     const body = `From roadmap "${journeyTitle}". Time to check in on this milestone!`;
     const tag = `milestone-${milestone.id}`;
 
-    // 1. Play Ringtone Alarm
-    soundEngine.startAlarmLoop(ringtone, 3);
+    const config = ringtoneConfig || { type: 'synth', key: 'morning_bell' };
 
-    // 2. Mobile Vibration (if supported)
+    // 1. Play Audio Alarm (if synth or custom file)
+    if (config.type === 'synth') {
+      soundEngine.startAlarmLoop(config.key || 'morning_bell', 3);
+    } else if (config.type === 'custom_file') {
+      soundEngine.playCustomAudioFile();
+    } else if (config.type === 'audio_url' && config.url) {
+      soundEngine.playAudioUrl(config.url);
+    }
+    // Note: If config.type === 'youtube', the AlarmAlertModal will automatically render and autoplay the YouTube player!
+
+    // 2. Mobile Vibration
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate([250, 100, 250, 100, 400]);
@@ -78,15 +87,15 @@ class NotificationService {
       this.activeAlarmModalCallback({
         milestone,
         journeyTitle,
-        ringtone
+        ringtoneConfig: config,
       });
     }
   }
 
   // Check upcoming reminders for today
-  checkReminders(journeys, userRingtone = 'morning_bell') {
+  checkReminders(journeys, userRingtoneConfig) {
     const now = new Date();
-    const todayStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
+    const todayStr = now.toISOString().split('T')[0];
     const hours = String(now.getHours()).padStart(2, '0');
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const currentTimeStr = `${hours}:${minutes}`;
@@ -105,7 +114,7 @@ class NotificationService {
             this.triggerReminder({
               milestone: ms,
               journeyTitle: journey.title,
-              ringtone: userRingtone,
+              ringtoneConfig: ms.customRingtone || userRingtoneConfig,
             });
           }
         }

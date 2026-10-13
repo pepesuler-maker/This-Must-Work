@@ -55,11 +55,14 @@ export default function App() {
 
     // Check reminders every 12 seconds
     const interval = setInterval(() => {
-      notificationService.checkReminders(journeys, settings.ringtone);
+      notificationService.checkReminders(
+        journeys,
+        settings.ringtoneConfig || { type: 'synth', key: settings.ringtone || 'morning_bell' }
+      );
     }, 12000);
 
     return () => clearInterval(interval);
-  }, [journeys, settings.ringtone]);
+  }, [journeys, settings.ringtoneConfig, settings.ringtone]);
 
   // Sync journeys to local storage whenever changed
   useEffect(() => {

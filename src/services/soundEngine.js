@@ -1,5 +1,14 @@
-// Web Audio API Sound Synthesizer - 100% Offline & Pure Synthesis
-// No external MP3 downloads required! Always works offline.
+// Web Audio API Sound Synthesizer + Custom Audio Controller
+// 100% Offline synthesizer + support for custom audio and YouTube alarms
+
+import { getCustomAudioFile } from './audioStorage';
+
+export function extractYouTubeId(url) {
+  if (!url) return null;
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = String(url).match(regExp);
+  return match && match[2].length === 11 ? match[2] : null;
+}
 
 class SoundEngine {
   constructor() {
@@ -7,9 +16,9 @@ class SoundEngine {
     this.enabled = true;
     this.volume = 0.8;
     this.currentAlarmInterval = null;
+    this.activeAudioElement = null;
   }
 
-  // Lazy-initialize AudioContext on first user interaction (browser policy)
   init() {
     if (!this.audioCtx) {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -24,13 +33,19 @@ class SoundEngine {
 
   setVolume(val) {
     this.volume = Math.max(0, Math.min(1, val));
+    if (this.activeAudioElement) {
+      this.activeAudioElement.volume = this.volume;
+    }
   }
 
   toggleSound(enabled) {
     this.enabled = enabled;
+    if (!enabled) {
+      this.stopAlarmLoop();
+    }
   }
 
-  // 1. Cute Bubbly Pop (for clicks and checking off items)
+  // 1. Cute Bubbly Pop (clicks)
   playPop() {
     if (!this.enabled) return;
     this.init();
@@ -59,7 +74,7 @@ class SoundEngine {
     }
   }
 
-  // 2. Playful Ding / Success Tone
+  // 2. Success tone
   playSuccess() {
     if (!this.enabled) return;
     this.init();
@@ -68,7 +83,7 @@ class SoundEngine {
     try {
       const ctx = this.audioCtx;
       const now = ctx.currentTime;
-      const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+      const notes = [523.25, 659.25, 783.99];
 
       notes.forEach((freq, i) => {
         const osc = ctx.createOscillator();
@@ -93,7 +108,7 @@ class SoundEngine {
     }
   }
 
-  // 3. Triumphant Milestone Fanfare (confetti celebration)
+  // 3. Milestone Fanfare
   playMilestoneFanfare() {
     if (!this.enabled) return;
     this.init();
@@ -102,13 +117,12 @@ class SoundEngine {
     try {
       const ctx = this.audioCtx;
       const now = ctx.currentTime;
-      // Cheerful ascending arpeggio with celebratory bell chime
       const melody = [
-        { f: 523.25, d: 0.12 }, // C5
-        { f: 659.25, d: 0.12 }, // E5
-        { f: 783.99, d: 0.12 }, // G5
-        { f: 880.00, d: 0.14 }, // A5
-        { f: 1046.50, d: 0.45 }, // C6
+        { f: 523.25, d: 0.12 },
+        { f: 659.25, d: 0.12 },
+        { f: 783.99, d: 0.12 },
+        { f: 880.00, d: 0.14 },
+        { f: 1046.50, d: 0.45 },
       ];
 
       let elapsed = 0;
@@ -137,9 +151,7 @@ class SoundEngine {
     }
   }
 
-  // RINGTONES for REMINDERS & ALARMS:
-
-  // Ringtone A: Morning Bell (Peaceful tubular chimes)
+  // Synthesizer Chimes
   playMorningBell() {
     if (!this.enabled) return;
     this.init();
@@ -151,7 +163,7 @@ class SoundEngine {
       { f: 440, delay: 0 },
       { f: 554.37, delay: 0.25 },
       { f: 659.25, delay: 0.5 },
-      { f: 880, delay: 0.75 }
+      { f: 880, delay: 0.75 },
     ];
 
     chords.forEach(({ f, delay }) => {
@@ -174,7 +186,6 @@ class SoundEngine {
     });
   }
 
-  // Ringtone B: Cozy Marimba (Warm wooden xylophone melody)
   playCozyMarimba() {
     if (!this.enabled) return;
     this.init();
@@ -182,7 +193,6 @@ class SoundEngine {
 
     const ctx = this.audioCtx;
     const now = ctx.currentTime;
-    // Bouncy pentatonic tune
     const pattern = [523.25, 587.33, 659.25, 783.99, 880, 1046.50];
 
     pattern.forEach((freq, idx) => {
@@ -193,7 +203,6 @@ class SoundEngine {
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(freq, start);
 
-      // Fast percussive decay like wooden bars
       gain.gain.setValueAtTime(this.volume * 0.5, start);
       gain.gain.exponentialRampToValueAtTime(0.001, start + 0.22);
 
@@ -205,7 +214,6 @@ class SoundEngine {
     });
   }
 
-  // Ringtone C: Bubble Harp (Gentle cascading arpeggios)
   playBubbleHarp() {
     if (!this.enabled) return;
     this.init();
@@ -213,7 +221,7 @@ class SoundEngine {
 
     const ctx = this.audioCtx;
     const now = ctx.currentTime;
-    const scale = [392.00, 493.88, 587.33, 659.25, 783.99, 987.77]; // G major
+    const scale = [392.00, 493.88, 587.33, 659.25, 783.99, 987.77];
 
     scale.forEach((freq, idx) => {
       const osc = ctx.createOscillator();
@@ -235,7 +243,6 @@ class SoundEngine {
     });
   }
 
-  // Ringtone D: Stardust Fanfare (Bright upbeat fanfare)
   playStardustFanfare() {
     if (!this.enabled) return;
     this.init();
@@ -244,10 +251,10 @@ class SoundEngine {
     const ctx = this.audioCtx;
     const now = ctx.currentTime;
     const notes = [
-      { f: 587.33, d: 0.12 }, // D5
-      { f: 739.99, d: 0.12 }, // F#5
-      { f: 880.00, d: 0.12 }, // A5
-      { f: 1174.66, d: 0.4 }, // D6
+      { f: 587.33, d: 0.12 },
+      { f: 739.99, d: 0.12 },
+      { f: 880.00, d: 0.12 },
+      { f: 1174.66, d: 0.4 },
     ];
 
     let t = 0;
@@ -257,7 +264,6 @@ class SoundEngine {
       const start = now + t;
 
       osc.type = 'sawtooth';
-      // Low pass filter for warm cartoony sound
       const filter = ctx.createBiquadFilter();
       filter.type = 'lowpass';
       filter.frequency.setValueAtTime(1400, start);
@@ -279,7 +285,42 @@ class SoundEngine {
     });
   }
 
-  // Play ringtone by key
+  // Play uploaded audio file from IndexedDB
+  async playCustomAudioFile(key = 'default_custom_audio') {
+    this.stopCustomAudio();
+    const item = await getCustomAudioFile(key);
+    if (!item || !item.blob) return false;
+
+    const url = URL.createObjectURL(item.blob);
+    const audio = new Audio(url);
+    audio.volume = this.volume;
+    audio.loop = true;
+    this.activeAudioElement = audio;
+
+    audio.play().catch((e) => console.warn('Custom audio playback error:', e));
+    return true;
+  }
+
+  // Play direct audio URL (MP3)
+  playAudioUrl(url) {
+    if (!url) return;
+    this.stopCustomAudio();
+    const audio = new Audio(url);
+    audio.volume = this.volume;
+    audio.loop = true;
+    this.activeAudioElement = audio;
+    audio.play().catch((e) => console.warn('Audio URL playback error:', e));
+  }
+
+  stopCustomAudio() {
+    if (this.activeAudioElement) {
+      this.activeAudioElement.pause();
+      this.activeAudioElement.currentTime = 0;
+      this.activeAudioElement = null;
+    }
+  }
+
+  // Play ringtone by key / object
   playRingtone(key) {
     switch (key) {
       case 'cozy_marimba':
@@ -291,6 +332,9 @@ class SoundEngine {
       case 'stardust_fanfare':
         this.playStardustFanfare();
         break;
+      case 'custom_file':
+        this.playCustomAudioFile();
+        break;
       case 'morning_bell':
       default:
         this.playMorningBell();
@@ -298,9 +342,15 @@ class SoundEngine {
     }
   }
 
-  // Start continuous alarm repetition for notifications
+  // Start continuous alarm loop
   startAlarmLoop(ringtoneKey, repeats = 3) {
     this.stopAlarmLoop();
+
+    if (ringtoneKey === 'custom_file') {
+      this.playCustomAudioFile();
+      return;
+    }
+
     let count = 0;
     this.playRingtone(ringtoneKey);
     count++;
@@ -322,6 +372,7 @@ class SoundEngine {
       clearInterval(this.currentAlarmInterval);
       this.currentAlarmInterval = null;
     }
+    this.stopCustomAudio();
   }
 }
 
