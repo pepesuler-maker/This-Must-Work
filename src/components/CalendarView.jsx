@@ -134,7 +134,7 @@ export function CalendarView({
             return (
               <div 
                 key={`empty-${idx}`} 
-                style={{ background: 'transparent', minHeight: 84 }} 
+                style={{ background: 'transparent', minHeight: 84, minWidth: 0, width: '100%' }} 
               />
             );
           }

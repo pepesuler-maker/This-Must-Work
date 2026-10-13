@@ -614,13 +614,18 @@ button {
   border-radius: 32px;
   padding: 24px;
   box-shadow: var(--card-shadow);
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .calendar-grid {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 8px;
   margin-top: 16px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .calendar-weekday {
@@ -630,6 +635,10 @@ button {
   color: var(--text-muted);
   font-size: 0.88rem;
   padding: 6px 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .calendar-day-cell {
@@ -642,6 +651,10 @@ button {
   flex-direction: column;
   transition: transform 0.1s ease;
   cursor: pointer;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .calendar-day-cell:hover {
@@ -660,6 +673,7 @@ button {
   font-weight: 700;
   font-size: 0.85rem;
   margin-bottom: 4px;
+  min-width: 0;
 }
 
 .calendar-ms-pill {
@@ -673,6 +687,10 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   margin-top: 2px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  display: block;
 }
 .calendar-ms-pill.completed {
   background: #C8E6C9;
