@@ -194,32 +194,19 @@ export const storageService = {
       if (data) {
         const parsed = JSON.parse(data);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((acc) => ({
+          // Remove dummy accounts (e.g. legacy acc-1, acc-dummy)
+          const nonDummy = parsed.filter(
+            (acc) => acc.id !== 'acc-1' && acc.id !== 'acc-dummy'
+          );
+          if (nonDummy.length !== parsed.length) {
+            this.saveAccounts(nonDummy);
+          }
+          return nonDummy.map((acc) => ({
             ...acc,
             email: acc.email || `${acc.name.toLowerCase().replace(/\s+/g, '')}@bloomtrail.app`,
             isVerified: acc.isVerified ?? true,
           }));
         }
-      }
-
-      // Preserve existing Alex account if legacy data exists
-      const legacyJourneys = localStorage.getItem(STORAGE_KEY_LEGACY_JOURNEYS);
-      const acc1Journeys = localStorage.getItem('bloomtrail_acc_acc-1_journeys_v2');
-      if (legacyJourneys || acc1Journeys) {
-        const initialAcc = [{
-          id: 'acc-1',
-          name: 'Alex',
-          email: 'alex@bloomtrail.app',
-          password: '1234',
-          pin: '1234',
-          avatar: '🦊',
-          themeColor: '#FF9AA2',
-          isVerified: true,
-          bio: 'Cozy Explorer',
-          createdAt: new Date().toISOString(),
-        }];
-        this.saveAccounts(initialAcc);
-        return initialAcc;
       }
     } catch (e) {
       console.error('Failed to load accounts', e);
@@ -371,9 +358,6 @@ export const storageService = {
       const accounts = this.getAccounts();
       if (id && accounts.some((a) => a.id === id)) {
         return id;
-      }
-      if (accounts.length > 0) {
-        return accounts[0].id;
       }
     } catch (e) {
       console.error('Failed to get active account id', e);

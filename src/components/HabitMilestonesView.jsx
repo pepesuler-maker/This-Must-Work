@@ -13,6 +13,7 @@ const THEME_COLORS = ['#FF9AA2', '#B5EAEA', '#FFDAC1', '#E2F0CB', '#FFB7B2', '#D
 export function HabitMilestonesView({
   habits,
   onUpdateHabits,
+  onRequireAccount,
 }) {
   const [activeHabitForStamp, setActiveHabitForStamp] = useState(null);
   const [initialDateForStamp, setInitialDateForStamp] = useState('');
@@ -90,6 +91,7 @@ export function HabitMilestonesView({
 
   // Handle deleting a habit milestone
   const handleDeleteHabit = (habitId) => {
+    if (onRequireAccount && !onRequireAccount()) return;
     if (confirm('Delete this habit milestone and its stamps?')) {
       soundEngine.playPop();
       onUpdateHabits(habits.filter((h) => h.id !== habitId));
@@ -130,6 +132,7 @@ export function HabitMilestonesView({
           className="btn-bubble btn-mint"
           onClick={() => {
             soundEngine.playPop();
+            if (onRequireAccount && !onRequireAccount()) return;
             setIsNewHabitModalOpen(true);
           }}
           style={{ padding: '9px 16px', fontSize: '0.88rem', flexShrink: 0 }}
@@ -252,6 +255,7 @@ export function HabitMilestonesView({
                           setViewingStampProof({ stamp: wd.stamp, habitTitle: habit.title, habitId: habit.id });
                         } else {
                           soundEngine.playPop();
+                          if (onRequireAccount && !onRequireAccount()) return;
                           setInitialDateForStamp(wd.date);
                           setActiveHabitForStamp(habit);
                         }
@@ -289,6 +293,7 @@ export function HabitMilestonesView({
                   style={{ flex: 1, padding: '10px 14px', fontSize: '0.88rem' }}
                   onClick={() => {
                     soundEngine.playPop();
+                    if (onRequireAccount && !onRequireAccount()) return;
                     setInitialDateForStamp(new Date().toISOString().split('T')[0]);
                     setActiveHabitForStamp(habit);
                   }}

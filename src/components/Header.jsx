@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wifi, WifiOff, Volume2, VolumeX, Settings, Download, Flame } from 'lucide-react';
+import { Wifi, WifiOff, Volume2, VolumeX, Settings, Download, Flame, User } from 'lucide-react';
 import { soundEngine } from '../services/soundEngine';
 
 export function Header({
@@ -8,6 +8,8 @@ export function Header({
   onOpenSettings,
   soundEnabled,
   onToggleSound,
+  activeAccount,
+  onOpenAuthPrompt,
 }) {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -71,6 +73,21 @@ export function Header({
 
         {/* Right: Quick Controls */}
         <div className="header-quick-controls">
+          {/* Guest Sign In / Create Account button */}
+          {!activeAccount && onOpenAuthPrompt && (
+            <button
+              className="btn-bubble btn-mint btn-install-mini"
+              onClick={() => {
+                soundEngine.playPop();
+                onOpenAuthPrompt();
+              }}
+              title="Create Account to save your progress"
+            >
+              <User size={13} />
+              <span className="install-label">Create Account</span>
+            </button>
+          )}
+
           {installPrompt && !isInstalled && (
             <button 
               className="btn-bubble btn-mint btn-install-mini"

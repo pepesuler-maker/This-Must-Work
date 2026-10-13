@@ -32,6 +32,15 @@ export default function App() {
   const [isEmailAuthModalOpen, setIsEmailAuthModalOpen] = useState(false);
   const [emailAuthMode, setEmailAuthMode] = useState('signup'); // 'signup' | 'signin'
 
+  // Guest Auth Prompt Modal (prompts unauthenticated guests to create an account on feature click)
+  const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
+
+  const requireAccount = () => {
+    soundEngine.playPop();
+    setIsAuthPromptOpen(true);
+    return false;
+  };
+
   // Per-account data
   const [journeys, setJourneys] = useState(() => storageService.loadJourneys(activeAccountId));
   const [habits, setHabits] = useState(() => storageService.loadHabitMilestones(activeAccountId));
@@ -140,6 +149,7 @@ export default function App() {
 
   // Archive a trail/journey
   const handleArchiveJourney = (jId) => {
+    if (!activeAccount) return requireAccount();
     soundEngine.playPop();
     const updated = journeys.map((j) =>
       j.id === jId ? { ...j, isArchived: true, archivedAt: new Date().toISOString() } : j
@@ -153,6 +163,7 @@ export default function App() {
 
   // Restore an archived trail
   const handleRestoreJourney = (jId) => {
+    if (!activeAccount) return requireAccount();
     soundEngine.playSuccess();
     const updated = journeys.map((j) =>
       j.id === jId ? { ...j, isArchived: false, archivedAt: null } : j
@@ -163,6 +174,7 @@ export default function App() {
 
   // Delete a trail completely
   const handleDeleteJourney = (jId) => {
+    if (!activeAccount) return requireAccount();
     soundEngine.playPop();
     const updated = journeys.filter((j) => j.id !== jId);
     setJourneys(updated);
@@ -181,6 +193,7 @@ export default function App() {
 
   // Add a new milestone to a journey (Zero pre-made text)
   const handleAddMilestone = (prefillDate = '', targetJourneyId = null) => {
+    if (!activeAccount) return requireAccount();
     soundEngine.playPop();
     const newMs = {
       id: 'ms-' + Date.now(),
@@ -236,6 +249,7 @@ export default function App() {
     targetDate = '',
     reminderTime = '10:00',
   }) => {
+    if (!activeAccount) return requireAccount();
     soundEngine.playSuccess();
     const newMs = {
       id: 'ms-' + Date.now(),
@@ -283,6 +297,7 @@ export default function App() {
   };
 
   const handleUpdateMilestone = (updatedMs) => {
+    if (!activeAccount) return requireAccount();
     const updatedJourneys = journeys.map((j) => {
       if (j.milestones.some((m) => m.id === updatedMs.id)) {
         return {
@@ -296,6 +311,7 @@ export default function App() {
   };
 
   const handleDeleteMilestone = (msId) => {
+    if (!activeAccount) return requireAccount();
     const updatedJourneys = journeys.map((j) => {
       return {
         ...j,
@@ -306,43 +322,11 @@ export default function App() {
   };
 
   const handleCreateJourney = (newJourney) => {
+    if (!activeAccount) return requireAccount();
     const updated = [...journeys, newJourney];
     setJourneys(updated);
     setActiveJourneyId(newJourney.id);
   };
-
-  // If no account exists or active account is locked, render clean blank page with centered Create Account button
-  if (!activeAccount || accounts.length === 0) {
-    return (
-      <div className="app-wrapper">
-        <BlankLandingView
-          accounts={accounts}
-          onOpenCreateAccount={() => {
-            setEmailAuthMode('signup');
-            setIsEmailAuthModalOpen(true);
-          }}
-          onOpenSignIn={() => {
-            setEmailAuthMode('signin');
-            setIsEmailAuthModalOpen(true);
-          }}
-          onSelectAccount={(accId) => handleSelectAccount(accId)}
-        />
-
-        {isEmailAuthModalOpen && (
-          <EmailAuthModal
-            initialMode={emailAuthMode}
-            onSuccess={(newAcc) => {
-              const freshAccounts = storageService.getAccounts();
-              setAccounts(freshAccounts);
-              handleSelectAccount(newAcc.id);
-              setIsEmailAuthModalOpen(false);
-            }}
-            onClose={() => setIsEmailAuthModalOpen(false)}
-          />
-        )}
-      </div>
-    );
-  }
 
   return (
     <div className="app-wrapper">
@@ -357,6 +341,8 @@ export default function App() {
           storageService.saveSettings(updated, activeAccountId);
         }}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        activeAccount={activeAccount}
+        onOpenAuthPrompt={() => setIsAuthPromptOpen(true)}
       />
 
       {/* Main View Tabs (Desktop & Tablet) */}
@@ -434,6 +420,10 @@ export default function App() {
               className="journey-chip chip-add-new"
               onClick={() => {
                 soundEngine.playPop();
+                if (!activeAccount) {
+                  requireAccount();
+                  return;
+                }
                 setIsNewJourneyOpen(true);
               }}
             >
@@ -446,6 +436,10 @@ export default function App() {
                 className="journey-chip chip-archived"
                 onClick={() => {
                   soundEngine.playPop();
+                  if (!activeAccount) {
+                    requireAccount();
+                    return;
+                  }
                   setIsArchivedModalOpen(true);
                 }}
                 title="View and restore archived trails"
@@ -472,7 +466,14 @@ export default function App() {
         {activeTab === 'habits' && (
           <HabitMilestonesView
             habits={habits}
-            onUpdateHabits={(updated) => setHabits(updated)}
+            onRequireAccount={requireAccount}
+            onUpdateHabits={(updated) => {
+              if (!activeAccount) {
+                requireAccount();
+                return;
+              }
+              setHabits(updated);
+            }}
           />
         )}
 
@@ -648,6 +649,29 @@ export default function App() {
           onClose={() => setIsArchivedModalOpen(false)}
           onRestoreJourney={handleRestoreJourney}
           onDeleteJourney={handleDeleteJourney}
+        />
+      )}
+
+      {/* Guest Auth Prompt Modal (Shows the exact card from the screenshot) */}
+      {isAuthPromptOpen && (
+        <BlankLandingView
+          isModal={true}
+          accounts={accounts}
+          onSelectAccount={(newAccId) => {
+            handleSelectAccount(newAccId);
+            setIsAuthPromptOpen(false);
+          }}
+          onClose={() => setIsAuthPromptOpen(false)}
+          onOpenCreateAccount={() => {
+            setIsAuthPromptOpen(false);
+            setEmailAuthMode('signup');
+            setIsEmailAuthModalOpen(true);
+          }}
+          onOpenSignIn={() => {
+            setIsAuthPromptOpen(false);
+            setEmailAuthMode('signin');
+            setIsEmailAuthModalOpen(true);
+          }}
         />
       )}
     </div>
