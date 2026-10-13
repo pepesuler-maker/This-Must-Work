@@ -141,6 +141,19 @@ export default function App() {
     handleSelectAccount(newAcc.id);
   };
 
+  // Handle deleting an account
+  const handleDeleteAccount = (accId) => {
+    soundEngine.playPop();
+    storageService.deleteAccount(accId);
+    const freshAccounts = storageService.getAccounts();
+    setAccounts(freshAccounts);
+    if (activeAccountId === accId) {
+      storageService.setActiveAccountId('guest');
+      setActiveAccountId(null);
+      setIsSettingsOpen(false);
+    }
+  };
+
   // Separate active and archived journeys
   const activeJourneys = journeys.filter((j) => !j.isArchived);
   const archivedJourneys = journeys.filter((j) => j.isArchived);
@@ -335,6 +348,42 @@ export default function App() {
     setJourneys(updated);
     setActiveJourneyId(newJourney.id);
   };
+
+  // If no account is active (guest / logged out), render the clean welcome screen directly
+  if (!activeAccount) {
+    return (
+      <div className="app-wrapper">
+        <BlankLandingView
+          isModal={false}
+          accounts={accounts}
+          onSelectAccount={(newAccId) => handleSelectAccount(newAccId)}
+          onDeleteAccount={handleDeleteAccount}
+          onOpenCreateAccount={() => {
+            setEmailAuthMode('signup');
+            setIsEmailAuthModalOpen(true);
+          }}
+          onOpenSignIn={() => {
+            setEmailAuthMode('signin');
+            setIsEmailAuthModalOpen(true);
+          }}
+        />
+
+        {/* Email Auth Modal */}
+        {isEmailAuthModalOpen && (
+          <EmailAuthModal
+            initialMode={emailAuthMode}
+            onSuccess={(newAcc) => {
+              const freshAccounts = storageService.getAccounts();
+              setAccounts(freshAccounts);
+              handleSelectAccount(newAcc.id);
+              setIsEmailAuthModalOpen(false);
+            }}
+            onClose={() => setIsEmailAuthModalOpen(false)}
+          />
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="app-wrapper">
@@ -583,6 +632,7 @@ export default function App() {
           activeAccount={activeAccount}
           accounts={accounts}
           onSelectAccount={(newAccId) => handleSelectAccount(newAccId)}
+          onDeleteAccount={handleDeleteAccount}
           onOpenCreateAccount={() => {
             setIsSettingsOpen(false);
             setEmailAuthMode('signup');
@@ -670,6 +720,7 @@ export default function App() {
             handleSelectAccount(newAccId);
             setIsAuthPromptOpen(false);
           }}
+          onDeleteAccount={handleDeleteAccount}
           onClose={() => setIsAuthPromptOpen(false)}
           onOpenCreateAccount={() => {
             setIsAuthPromptOpen(false);

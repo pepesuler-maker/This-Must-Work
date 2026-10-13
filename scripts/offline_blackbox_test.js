@@ -495,6 +495,35 @@ const pepeHabits = storageService.loadHabitMilestones(pepeAcc.id);
 assert(Array.isArray(pepeHabits) && pepeHabits.length > 0, 'pepesuler@gmail.com has isolated habit milestones');
 
 // ---------------------------------------------------------------------
+// TEST SUITE 12: Account Removal / Deletion & True Log Out State Contract
+// ---------------------------------------------------------------------
+console.log('\n🗑️ Test Suite 12: Account Removal / Deletion & True Log Out State Contract');
+
+// 1. Create a dynamic test account "Leon"
+const leonAcc = storageService.addAccount({
+  name: 'Leon',
+  email: 'leon@example.com',
+  password: '1234',
+  avatar: '🦁',
+});
+assert(Boolean(leonAcc && leonAcc.id), 'Account "Leon" created successfully');
+let accountsWithLeon = storageService.getAccounts();
+assert(accountsWithLeon.some(a => a.id === leonAcc.id), '"Leon" is listed in accounts store');
+
+// 2. Delete "Leon" account completely
+const remainingAfterDelete = storageService.deleteAccount(leonAcc.id);
+assert(!remainingAfterDelete.some(a => a.id === leonAcc.id), '"Leon" is completely removed after deleteAccount()');
+const refreshedAccounts = storageService.getAccounts();
+assert(!refreshedAccounts.some(a => a.id === leonAcc.id), '"Leon" is absent from storageService.getAccounts()');
+
+// 3. Test True Log Out Contract
+storageService.setActiveAccountId('guest');
+const loggedOutId = storageService.getActiveAccountId();
+assert(loggedOutId === null, 'Signing out sets active account to null (True Log Out)');
+const loggedOutAccount = storageService.getActiveAccount();
+assert(loggedOutAccount === null, 'getActiveAccount returns null when logged out');
+
+// ---------------------------------------------------------------------
 // TEST SUMMARY REPORT
 // ---------------------------------------------------------------------
 

@@ -216,11 +216,16 @@ export const storageService = {
         }
       }
 
-      // Ensure test user account is always pre-seeded and available
+      // Ensure test user account is pre-seeded unless explicitly deleted
       const hasPepe = list.some(
         (acc) => acc.email && acc.email.toLowerCase() === 'pepesuler@gmail.com'
       );
-      if (!hasPepe) {
+      let isPepeDeleted = false;
+      try {
+        isPepeDeleted = localStorage.getItem('bloomtrail_deleted_acc-pepe') === 'true';
+      } catch (e) {}
+
+      if (!hasPepe && !isPepeDeleted && list.length === 0) {
         list.push(DEFAULT_TEST_ACCOUNT);
         this.saveAccounts(list);
       }
@@ -368,8 +373,20 @@ export const storageService = {
     const accounts = this.getAccounts();
     const updated = accounts.filter((a) => a.id !== accId);
     this.saveAccounts(updated);
+    if (accId === 'acc-pepe') {
+      try {
+        localStorage.setItem('bloomtrail_deleted_acc-pepe', 'true');
+      } catch (e) {}
+    }
     if (this.getActiveAccountId() === accId) {
-      this.setActiveAccountId(updated[0]?.id || null);
+      this.setActiveAccountId('guest');
+    }
+    try {
+      localStorage.removeItem(`bloomtrail_acc_${accId}_journeys_v2`);
+      localStorage.removeItem(`bloomtrail_acc_${accId}_habits_v2`);
+      localStorage.removeItem(`bloomtrail_acc_${accId}_settings_v2`);
+    } catch (e) {
+      console.error('Error cleaning up account storage', e);
     }
     return updated;
   },
@@ -377,18 +394,12 @@ export const storageService = {
   getActiveAccountId() {
     try {
       const id = localStorage.getItem(STORAGE_KEY_ACTIVE_ACCOUNT_ID);
-      const accounts = this.getAccounts();
-      if (id && accounts.some((a) => a.id === id)) {
-        return id;
+      if (id === 'guest' || !id) {
+        return null;
       }
-      // If user hasn't explicitly set a session or signed out to guest mode,
-      // default to the testing account 'acc-pepe' (pepesuler@gmail.com)
-      if (id === null) {
-        const pepe = accounts.find((a) => a.email && a.email.toLowerCase() === 'pepesuler@gmail.com');
-        if (pepe) {
-          this.setActiveAccountId(pepe.id);
-          return pepe.id;
-        }
+      const accounts = this.getAccounts();
+      if (accounts.some((a) => a.id === id)) {
+        return id;
       }
     } catch (e) {
       console.error('Failed to get active account id', e);

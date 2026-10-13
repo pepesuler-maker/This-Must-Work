@@ -3,7 +3,7 @@ import {
   X, Bell, Volume2, Play, Square, Download, Upload, 
   Smartphone, Monitor, Sparkles, Check, RefreshCw, 
   Music, Video, Radio, FileAudio, ExternalLink,
-  User, Lock, Plus
+  User, Lock, Plus, Trash2
 } from 'lucide-react';
 import { soundEngine, extractYouTubeId } from '../services/soundEngine';
 import { notificationService } from '../services/notificationService';
@@ -27,6 +27,7 @@ export function SettingsModal({
   onSelectAccount,
   onOpenCreateAccount,
   onSignOut,
+  onDeleteAccount,
 }) {
   // Ringtone config: { type: 'synth'|'youtube'|'custom_file'|'audio_url', synthKey, youtubeUrl, customFileName, audioUrl }
   const [ringtoneType, setRingtoneType] = useState(settings.ringtoneConfig?.type || 'synth');
@@ -266,21 +267,40 @@ export function SettingsModal({
                   {activeAccount.email || 'offline-local@bloomtrail.app'}
                 </div>
               </div>
-              {onSignOut && (
-                <button
-                  type="button"
-                  className="btn-bubble btn-cream"
-                  style={{ padding: '6px 10px', fontSize: '0.75rem', gap: 4 }}
-                  onClick={() => {
-                    soundEngine.playPop();
-                    onSignOut();
-                  }}
-                  title="Lock profile and return to welcome screen"
-                >
-                  <Lock size={12} />
-                  <span>Sign Out</span>
-                </button>
-              )}
+              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                {onSignOut && (
+                  <button
+                    type="button"
+                    className="btn-bubble btn-cream"
+                    style={{ padding: '6px 10px', fontSize: '0.75rem', gap: 4 }}
+                    onClick={() => {
+                      soundEngine.playPop();
+                      onSignOut();
+                    }}
+                    title="Lock profile and return to welcome screen"
+                  >
+                    <Lock size={12} />
+                    <span>Sign Out</span>
+                  </button>
+                )}
+                {onDeleteAccount && (
+                  <button
+                    type="button"
+                    className="btn-bubble btn-cream"
+                    style={{ padding: '6px 10px', fontSize: '0.75rem', gap: 4, color: '#C62828', borderColor: '#EF9A9A' }}
+                    onClick={() => {
+                      soundEngine.playPop();
+                      if (window.confirm(`Delete profile "${activeAccount.name}" permanently from this device? All local data for this account will be erased.`)) {
+                        onDeleteAccount(activeAccount.id);
+                      }
+                    }}
+                    title="Permanently remove this account from this device"
+                  >
+                    <Trash2 size={12} color="#C62828" />
+                    <span>Remove</span>
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             <div style={{ marginBottom: 12, fontSize: '0.82rem', color: 'var(--text-muted)' }}>
@@ -296,19 +316,35 @@ export function SettingsModal({
               </label>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {accounts.filter((a) => a.id !== activeAccount?.id).map((other) => (
-                  <button
-                    key={other.id}
-                    type="button"
-                    className="btn-bubble btn-cream"
-                    style={{ padding: '5px 10px', fontSize: '0.78rem' }}
-                    onClick={() => {
-                      soundEngine.playPop();
-                      onSelectAccount(other.id);
-                    }}
-                  >
-                    <span>{other.avatar || '🐼'}</span>
-                    <span>{other.name}</span>
-                  </button>
+                  <div key={other.id} style={{ display: 'inline-flex', alignItems: 'center', background: '#FFFDF9', border: '1.5px solid var(--border-color)', borderRadius: 16, padding: '2px 4px 2px 8px', gap: 4 }}>
+                    <button
+                      type="button"
+                      style={{ background: 'none', border: 'none', fontWeight: 800, fontSize: '0.78rem', color: 'var(--text-main)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, padding: '4px 2px' }}
+                      onClick={() => {
+                        soundEngine.playPop();
+                        onSelectAccount(other.id);
+                      }}
+                    >
+                      <span>{other.avatar || '🐼'}</span>
+                      <span>{other.name}</span>
+                    </button>
+                    {onDeleteAccount && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          soundEngine.playPop();
+                          if (window.confirm(`Delete profile "${other.name}" from this device?`)) {
+                            onDeleteAccount(other.id);
+                          }
+                        }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 3, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C62828' }}
+                        title={`Delete ${other.name}`}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
                 ))}
               </div>
             </div>
