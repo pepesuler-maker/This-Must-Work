@@ -80,7 +80,11 @@ export function RoadmapView({
             {journey.icon || '🌱'}
           </div>
           <div>
-            <h2 style={{ fontSize: '1.4rem', lineHeight: 1.2 }}>{journey.title}</h2>
+            <h2 style={{ fontSize: '1.4rem', lineHeight: 1.2 }}>
+              {journey.title && journey.icon && journey.title.startsWith(journey.icon)
+                ? journey.title.slice(journey.icon.length).trim()
+                : journey.title}
+            </h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', fontWeight: 600 }}>
               {journey.description || 'Your personal adventure trail.'}
             </p>

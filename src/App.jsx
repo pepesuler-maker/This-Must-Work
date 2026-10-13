@@ -194,34 +194,40 @@ export default function App() {
 
       {/* Roadmaps Switcher Chips (visible when on roadmap view) */}
       {activeTab === 'roadmap' && (
-        <div className="journey-selector-bar">
-          <div className="journey-chips-list">
-            {journeys.map((j) => (
-              <button
-                key={j.id}
-                className={`journey-chip ${j.id === currentJourney.id ? 'active' : ''}`}
-                onClick={() => {
-                  soundEngine.playPop();
-                  setActiveJourneyId(j.id);
-                }}
-              >
-                <span>{j.icon || '🌱'}</span>
-                <span>{j.title}</span>
-              </button>
-            ))}
-          </div>
+        <div className="journey-chips-bar">
+          <div className="journey-chips-scroller">
+            {journeys.map((j) => {
+              // Strip duplicate icon from title if present
+              const displayTitle = j.title && j.icon && j.title.startsWith(j.icon)
+                ? j.title.slice(j.icon.length).trim()
+                : j.title;
 
-          <button
-            className="btn-bubble btn-cream"
-            style={{ padding: '8px 14px', fontSize: '0.85rem', whiteSpace: 'nowrap' }}
-            onClick={() => {
-              soundEngine.playPop();
-              setIsNewJourneyOpen(true);
-            }}
-          >
-            <Plus size={16} />
-            <span>New Journey</span>
-          </button>
+              return (
+                <button
+                  key={j.id}
+                  className={`journey-chip ${j.id === currentJourney.id ? 'active' : ''}`}
+                  onClick={() => {
+                    soundEngine.playPop();
+                    setActiveJourneyId(j.id);
+                  }}
+                >
+                  <span className="chip-icon">{j.icon || '🌱'}</span>
+                  <span className="chip-title">{displayTitle}</span>
+                </button>
+              );
+            })}
+
+            <button
+              className="journey-chip chip-add-new"
+              onClick={() => {
+                soundEngine.playPop();
+                setIsNewJourneyOpen(true);
+              }}
+            >
+              <Plus size={15} />
+              <span>New Quest</span>
+            </button>
+          </div>
         </div>
       )}
 
