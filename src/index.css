@@ -150,17 +150,19 @@ button {
   flex-direction: column;
 }
 
-/* Header Component */
+/* ==========================================================================
+   Header Component & Brand Bar
+   ========================================================================== */
 .header-container {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 12px 16px;
+  padding: 12px 20px;
   background: #FFFFFF;
   border: var(--border-thick);
   border-radius: var(--radius-bubble);
   box-shadow: var(--card-shadow);
-  margin-bottom: 18px;
+  margin-bottom: 20px;
+  box-sizing: border-box;
 }
 
 .header-main-row {
@@ -168,63 +170,128 @@ button {
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  gap: 8px;
+  gap: 16px;
 }
 
-.header-left-slot {
+/* 1. Logo Section */
+.logo-section {
   display: flex;
   align-items: center;
-  flex: 1;
-  min-width: 0;
+  gap: 12px;
+  flex-shrink: 0;
 }
 
-.header-center-slot {
+.logo-icon-bubble {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 14px;
+  background: #E8F8F0;
+  border: 2px solid var(--border-color);
+  box-shadow: 0 2.5px 0 var(--border-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 1;
-  text-align: center;
+  font-size: 24px;
+  line-height: 1;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  user-select: none;
 }
 
-.logo-center-group {
+.logo-section:hover .logo-icon-bubble {
+  transform: rotate(-6deg) scale(1.06);
+}
+
+.logo-text {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 1px;
 }
 
-.logo-mini-bubble {
-  font-size: 22px;
-}
-
-.logo-title-text {
+.logo-brand-title,
+.logo-text h1 {
   font-family: var(--font-bubble);
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-size: 1.35rem;
+  line-height: 1.15;
+  font-weight: 800;
   color: var(--text-main);
-  white-space: nowrap;
+  margin: 0;
+  padding: 0;
+  letter-spacing: -0.01em;
 }
 
-.header-right-slot {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  flex: 1;
+.logo-tagline {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  margin: 0;
+  padding: 0;
+  line-height: 1.2;
 }
 
+/* 2. Center Badges Group (Desktop & Tablet) */
+.header-badges-group,
 .header-badges-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
+.status-indicator-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: -1px;
+}
 
+.status-indicator-dot.online {
+  background: #2E7D32;
+  box-shadow: 0 0 5px rgba(46, 125, 50, 0.5);
+}
+
+.status-indicator-dot.offline {
+  background: #E65100;
+}
+
+/* 3. Quick Controls on Right */
+.header-quick-controls,
 .header-actions {
   display: flex;
+  flex-direction: row;
   align-items: center;
-  gap: 10px;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-header-ctrl {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  background: #FFFDF9;
+  border: 2px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 2.5px 0 var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-main);
+  transition: all 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.btn-header-ctrl:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4.5px 0 var(--border-color);
+  background: #FFF8F2;
+}
+
+.btn-header-ctrl:active {
+  transform: translateY(1px);
+  box-shadow: 0 1px 0 var(--border-color);
 }
 
 /* Badges */
@@ -1040,10 +1107,18 @@ button {
     border-radius: 16px;
   }
 
+  .header-main-row {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .header-badges-group,
   .header-badges-row {
+    order: 3;
     width: 100%;
     gap: 8px;
     justify-content: flex-start;
+    margin-top: 2px;
   }
 
   .badge-pill {

@@ -41,16 +41,35 @@ export function Header({
   return (
     <header className="header-container">
       <div className="header-main-row">
-        {/* Clean Logo Section on the Left */}
+        {/* Left: Brand Logo Group */}
         <div className="logo-section">
-          <div className="logo-icon-bubble">🌱</div>
+          <div className="logo-icon-bubble">
+            <span>🌱</span>
+          </div>
           <div className="logo-text">
-            <h1>BloomTrail</h1>
+            <h1 className="logo-brand-title">BloomTrail</h1>
             <p className="logo-tagline">Cozy Progression & Milestones</p>
           </div>
         </div>
 
-        {/* Quick controls on the Right */}
+        {/* Center: Streak & Online Badges */}
+        <div className="header-badges-group">
+          <div className="badge-pill badge-streak" title="Daily Check-in Streak!">
+            <Flame size={14} fill="#FF8A00" color="#B23A00" />
+            <span>{streakCount} Day Streak</span>
+          </div>
+
+          <div 
+            className={`badge-pill ${isOnline ? 'badge-online' : 'badge-offline'}`}
+            title={isOnline ? 'Online' : 'Offline'}
+          >
+            <div className={`status-indicator-dot ${isOnline ? 'online' : 'offline'}`} />
+            {isOnline ? <Wifi size={13} /> : <WifiOff size={13} />}
+            <span>{isOnline ? 'Online' : 'Offline'}</span>
+          </div>
+        </div>
+
+        {/* Right: Quick Controls */}
         <div className="header-quick-controls">
           {installPrompt && !isInstalled && (
             <button 
@@ -65,7 +84,7 @@ export function Header({
 
           {/* Sound Toggle */}
           <button
-            className="btn-icon-bubble"
+            className="btn-icon-bubble btn-header-ctrl"
             onClick={() => {
               soundEngine.playPop();
               onToggleSound(!soundEnabled);
@@ -77,31 +96,15 @@ export function Header({
 
           {/* Settings Button (Desktop header) */}
           <button
-            className="btn-icon-bubble desktop-only-btn"
+            className="btn-icon-bubble btn-header-ctrl desktop-only-btn"
             onClick={() => {
               soundEngine.playPop();
               onOpenSettings();
             }}
-            title="Open Settings"
+            title="Open Settings & Profile"
           >
             <Settings size={17} />
           </button>
-        </div>
-      </div>
-
-      {/* Badges Row (Streak + Online Status) */}
-      <div className="header-badges-row">
-        <div className="badge-pill badge-streak" title="Daily Check-in Streak!">
-          <Flame size={14} fill="#FF8A00" color="#B23A00" />
-          <span>{streakCount} Day Streak</span>
-        </div>
-
-        <div 
-          className={`badge-pill ${isOnline ? 'badge-online' : 'badge-offline'}`}
-          title={isOnline ? 'Online' : 'Offline'}
-        >
-          {isOnline ? <Wifi size={13} /> : <WifiOff size={13} />}
-          <span>{isOnline ? 'Online' : 'Offline'}</span>
         </div>
       </div>
     </header>
