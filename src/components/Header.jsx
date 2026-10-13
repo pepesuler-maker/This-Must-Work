@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Wifi, WifiOff, Volume2, VolumeX, Settings, Download, Flame } from 'lucide-react';
+import { Wifi, WifiOff, Volume2, VolumeX, Settings, Download, Flame, User, Lock } from 'lucide-react';
 import { soundEngine } from '../services/soundEngine';
 
 export function Header({
@@ -8,6 +8,8 @@ export function Header({
   onOpenSettings,
   soundEnabled,
   onToggleSound,
+  activeAccount,
+  onOpenAccounts,
 }) {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -51,6 +53,21 @@ export function Header({
 
         {/* Quick controls on the right */}
         <div className="header-quick-controls">
+          {/* Netflix-style Account Switcher Pill */}
+          <button
+            className="btn-bubble btn-cream btn-header-account"
+            onClick={() => {
+              soundEngine.playPop();
+              onOpenAccounts();
+            }}
+            title="Switch profile or account (Netflix-style PIN protected)"
+            style={{ padding: '6px 12px', fontSize: '0.82rem' }}
+          >
+            <span style={{ fontSize: 16 }}>{activeAccount?.avatar || '🦊'}</span>
+            <span className="header-account-name">{activeAccount?.name || 'Alex'}</span>
+            <Lock size={12} color="#E65100" />
+          </button>
+
           {/* Install PWA Button (if available) */}
           {installPrompt && !isInstalled && (
             <button 
@@ -89,8 +106,21 @@ export function Header({
         </div>
       </div>
 
-      {/* Badges Row (Streak + Online Status) */}
+      {/* Badges Row (Account Badge + Streak + Online Status) */}
       <div className="header-badges-row">
+        <div 
+          className="badge-pill badge-account-clickable" 
+          onClick={() => {
+            soundEngine.playPop();
+            onOpenAccounts();
+          }}
+          title="Switch Account (Netflix Style)"
+          style={{ cursor: 'pointer' }}
+        >
+          <span>{activeAccount?.avatar || '🦊'}</span>
+          <span>{activeAccount?.name || 'Alex'} (PIN 🔒)</span>
+        </div>
+
         <div className="badge-pill badge-streak" title="Daily Check-in Streak!">
           <Flame size={15} fill="#FF8A00" color="#B23A00" />
           <span>{streakCount} Day Streak</span>

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Compass, Calendar as CalendarIcon, Award, Plus, 
-  Settings as SettingsIcon, Sparkles, Check 
+  Settings as SettingsIcon, Activity 
 } from 'lucide-react';
 import { Header } from './components/Header';
 import { RoadmapView } from './components/RoadmapView';
 import { CalendarView } from './components/CalendarView';
 import { StickerAlbum } from './components/StickerAlbum';
+import { HabitMilestonesView } from './components/HabitMilestonesView';
+import { AccountProfileModal } from './components/AccountProfileModal';
 import { MilestoneModal } from './components/MilestoneModal';
 import { SettingsModal } from './components/SettingsModal';
 import { NewJourneyModal } from './components/NewJourneyModal';
@@ -17,10 +19,18 @@ import { soundEngine } from './services/soundEngine';
 import { notificationService } from './services/notificationService';
 
 export default function App() {
-  const [journeys, setJourneys] = useState(() => storageService.loadJourneys());
-  const [settings, setSettings] = useState(() => storageService.loadSettings());
+  // Accounts (Netflix-style 4 Accounts with PIN Password)
+  const [accounts, setAccounts] = useState(() => storageService.getAccounts());
+  const [activeAccountId, setActiveAccountId] = useState(() => storageService.getActiveAccountId());
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+
+  // Per-account data
+  const [journeys, setJourneys] = useState(() => storageService.loadJourneys(activeAccountId));
+  const [habits, setHabits] = useState(() => storageService.loadHabitMilestones(activeAccountId));
+  const [settings, setSettings] = useState(() => storageService.loadSettings(activeAccountId));
+
   const [activeJourneyId, setActiveJourneyId] = useState(() => journeys[0]?.id || '');
-  const [activeTab, setActiveTab] = useState('roadmap'); // 'roadmap' | 'calendar' | 'scrapbook'
+  const [activeTab, setActiveTab] = useState('roadmap'); // 'roadmap' | 'habits' | 'calendar' | 'scrapbook'
   
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [selectedMilestone, setSelectedMilestone] = useState(null);
@@ -28,6 +38,8 @@ export default function App() {
   const [isNewJourneyOpen, setIsNewJourneyOpen] = useState(false);
   const [isArchivedModalOpen, setIsArchivedModalOpen] = useState(false);
   const [activeAlarmData, setActiveAlarmData] = useState(null);
+
+  const activeAccount = accounts.find((a) => a.id === activeAccountId) || accounts[0];
 
   // Set sound engine parameters
   useEffect(() => {
@@ -66,10 +78,33 @@ export default function App() {
     return () => clearInterval(interval);
   }, [journeys, settings.ringtoneConfig, settings.ringtone]);
 
-  // Sync journeys to local storage whenever changed
+  // Sync journeys & habits to local storage whenever changed
   useEffect(() => {
-    storageService.saveJourneys(journeys);
-  }, [journeys]);
+    storageService.saveJourneys(journeys, activeAccountId);
+  }, [journeys, activeAccountId]);
+
+  useEffect(() => {
+    storageService.saveHabitMilestones(habits, activeAccountId);
+  }, [habits, activeAccountId]);
+
+  // Handle switching active account (Netflix style)
+  const handleSelectAccount = (newAccId) => {
+    storageService.setActiveAccountId(newAccId);
+    setActiveAccountId(newAccId);
+
+    // Refresh accounts list in case name/avatar was updated
+    setAccounts(storageService.getAccounts());
+
+    // Load newly selected account's isolated data
+    const loadedJourneys = storageService.loadJourneys(newAccId);
+    const loadedHabits = storageService.loadHabitMilestones(newAccId);
+    const loadedSettings = storageService.loadSettings(newAccId);
+
+    setJourneys(loadedJourneys);
+    setHabits(loadedHabits);
+    setSettings(loadedSettings);
+    setActiveJourneyId(loadedJourneys[0]?.id || '');
+  };
 
   // Separate active and archived journeys
   const activeJourneys = journeys.filter((j) => !j.isArchived);
@@ -127,13 +162,13 @@ export default function App() {
     return `${y}-${m}-${day}`;
   };
 
-  // Add a new milestone to a journey and open modal
+  // Add a new milestone to a journey and open modal (ZERO pre-made text, placeholder background text only)
   const handleAddMilestone = (prefillDate = '', targetJourneyId = null) => {
     soundEngine.playPop();
     const newMs = {
       id: 'ms-' + Date.now(),
-      title: 'New Checkpoint',
-      description: 'Describe what you plan to accomplish here.',
+      title: '', // Empty background placeholder
+      description: '', // Empty background placeholder
       status: 'in_progress',
       targetDate: prefillDate || getLocalDateString(),
       reminderTime: '10:00',
@@ -141,9 +176,7 @@ export default function App() {
       rewardSticker: '🌱 Little Sprout',
       reflection: '',
       completedAt: null,
-      subtasks: [
-        { id: 'st-' + Date.now(), title: 'First action step', completed: false },
-      ],
+      subtasks: [], // Starts clean and empty
     };
 
     const effectiveJourneyId = targetJourneyId 
@@ -179,9 +212,9 @@ export default function App() {
     setSelectedMilestone(newMs);
   };
 
-  // Directly create a checkpoint on a date without popup delay
+  // Directly create a checkpoint on a date without popup delay (ZERO pre-made text)
   const handleAddMilestoneDirect = ({
-    title = 'New Checkpoint',
+    title = '',
     journeyId = null,
     targetDate = '',
     reminderTime = '10:00',
@@ -189,7 +222,7 @@ export default function App() {
     soundEngine.playSuccess();
     const newMs = {
       id: 'ms-' + Date.now(),
-      title: title.trim() || 'New Checkpoint',
+      title: title.trim(),
       description: '',
       status: 'in_progress',
       targetDate: targetDate || getLocalDateString(),
@@ -198,9 +231,7 @@ export default function App() {
       rewardSticker: '🌱 Little Sprout',
       reflection: '',
       completedAt: null,
-      subtasks: [
-        { id: 'st-' + Date.now(), title: 'First action step', completed: false },
-      ],
+      subtasks: [],
     };
 
     const effectiveJourneyId = journeyId 
@@ -268,7 +299,7 @@ export default function App() {
 
   return (
     <div className="app-wrapper">
-      {/* App Header */}
+      {/* App Header with Netflix Account Switcher */}
       <Header
         isOnline={isOnline}
         streakCount={settings.streakCount || 1}
@@ -276,9 +307,11 @@ export default function App() {
         onToggleSound={(enabled) => {
           const updated = { ...settings, soundEffects: enabled };
           setSettings(updated);
-          storageService.saveSettings(updated);
+          storageService.saveSettings(updated, activeAccountId);
         }}
         onOpenSettings={() => setIsSettingsOpen(true)}
+        activeAccount={activeAccount}
+        onOpenAccounts={() => setIsAccountModalOpen(true)}
       />
 
       {/* Main View Tabs (Desktop & Tablet) */}
@@ -292,6 +325,17 @@ export default function App() {
         >
           <Compass size={18} />
           <span>Adventure Trail</span>
+        </button>
+
+        <button
+          className={`nav-tab-item ${activeTab === 'habits' ? 'active' : ''}`}
+          onClick={() => {
+            soundEngine.playPop();
+            setActiveTab('habits');
+          }}
+        >
+          <Activity size={18} />
+          <span>Habit Stamps</span>
         </button>
 
         <button
@@ -322,7 +366,6 @@ export default function App() {
         <div className="journey-chips-bar">
           <div className="journey-chips-scroller">
             {activeJourneys.map((j) => {
-              // Strip duplicate icon from title if present
               const displayTitle = j.title && j.icon && j.title.startsWith(j.icon)
                 ? j.title.slice(j.icon.length).trim()
                 : j.title;
@@ -337,7 +380,7 @@ export default function App() {
                   }}
                 >
                   <span className="chip-icon">{j.icon || '🌱'}</span>
-                  <span className="chip-title">{displayTitle}</span>
+                  <span className="chip-title">{displayTitle || 'Quest'}</span>
                 </button>
               );
             })}
@@ -382,6 +425,13 @@ export default function App() {
           />
         )}
 
+        {activeTab === 'habits' && (
+          <HabitMilestonesView
+            habits={habits}
+            onUpdateHabits={(updated) => setHabits(updated)}
+          />
+        )}
+
         {activeTab === 'calendar' && (
           <CalendarView
             journeys={journeys}
@@ -411,6 +461,17 @@ export default function App() {
         >
           <Compass size={20} />
           <span>Trail</span>
+        </button>
+
+        <button
+          className={`mobile-nav-btn ${activeTab === 'habits' ? 'active' : ''}`}
+          onClick={() => {
+            soundEngine.playPop();
+            setActiveTab('habits');
+          }}
+        >
+          <Activity size={20} />
+          <span>Habits</span>
         </button>
 
         <button
@@ -469,11 +530,12 @@ export default function App() {
           onClose={() => setIsSettingsOpen(false)}
           onUpdateSettings={(updated) => {
             setSettings(updated);
-            storageService.saveSettings(updated);
+            storageService.saveSettings(updated, activeAccountId);
           }}
           onDataImported={() => {
-            setJourneys(storageService.loadJourneys());
-            setSettings(storageService.loadSettings());
+            setJourneys(storageService.loadJourneys(activeAccountId));
+            setHabits(storageService.loadHabitMilestones(activeAccountId));
+            setSettings(storageService.loadSettings(activeAccountId));
           }}
         />
       )}
@@ -486,6 +548,16 @@ export default function App() {
         />
       )}
 
+      {/* Netflix Profile Modal (4 Accounts with PIN Password) */}
+      {isAccountModalOpen && (
+        <AccountProfileModal
+          accounts={accounts}
+          activeAccountId={activeAccountId}
+          onSelectAccount={handleSelectAccount}
+          onClose={() => setIsAccountModalOpen(false)}
+        />
+      )}
+
       {/* Active Alarm / Reminder Ringtone Pop-up */}
       {activeAlarmData && (
         <AlarmAlertModal
@@ -494,6 +566,7 @@ export default function App() {
           onOpenMilestone={(ms) => setSelectedMilestone(ms)}
         />
       )}
+
       {/* Archived Journeys Modal */}
       {isArchivedModalOpen && (
         <ArchivedJourneysModal

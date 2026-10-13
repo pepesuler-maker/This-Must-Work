@@ -17,30 +17,15 @@ export function NewJourneyModal({ onClose, onCreateJourney }) {
 
     soundEngine.playSuccess();
 
+    // Clean journey with zero pre-made dummy text
     const newJourney = {
       id: 'journey-' + Date.now(),
       title: `${icon} ${title.trim()}`,
-      description: description.trim() || 'A fresh personal adventure path.',
+      description: description.trim(),
       icon,
       themeColor,
       createdAt: new Date().toISOString(),
-      milestones: [
-        {
-          id: 'ms-' + Date.now(),
-          title: 'First Step into the Journey',
-          description: 'Plant the seed for this exciting path.',
-          status: 'in_progress',
-          targetDate: new Date().toISOString().split('T')[0],
-          reminderTime: '10:00',
-          reminderEnabled: true,
-          rewardSticker: '🌱 Little Sprout',
-          reflection: '',
-          completedAt: null,
-          subtasks: [
-            { id: 'st-1', title: 'Define first small action', completed: false }
-          ],
-        }
-      ],
+      milestones: [],
     };
 
     onCreateJourney(newJourney);
@@ -88,7 +73,7 @@ export function NewJourneyModal({ onClose, onCreateJourney }) {
             </div>
           </div>
 
-          {/* Title */}
+          {/* Title (Background placeholder text only, no pre-made text) */}
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
               Roadmap Title
@@ -102,15 +87,15 @@ export function NewJourneyModal({ onClose, onCreateJourney }) {
             />
           </div>
 
-          {/* Description */}
+          {/* Description (Background placeholder text only, no pre-made text) */}
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
-              What is your grand vision for this journey?
+              What is your vision for this journey?
             </label>
             <textarea
               className="input-bubble"
               rows={2}
-              placeholder="A few words about why this progression matters to you."
+              placeholder="A few words about why this progression matters to you..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
             />

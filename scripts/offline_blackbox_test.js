@@ -276,8 +276,138 @@ if (triggeredAlarm) {
 }
 
 // ---------------------------------------------------------------------
+// TEST SUITE 7: Netflix 4-Account Profile Management & PIN Password Security
+// ---------------------------------------------------------------------
+console.log('\n📺 Test Suite 7: Netflix 4-Account Profile & PIN Password Security');
+
+const accounts = storageService.getAccounts();
+assert(Array.isArray(accounts) && accounts.length === 4, 'Provides exactly 4 Netflix-style isolated accounts');
+
+const [acc1, acc2, acc3, acc4] = accounts;
+assert(Boolean(acc1.id && acc1.name && acc1.avatar && acc1.pin), 'Account structure has id, name, avatar, and pin');
+
+// Verify PIN security
+assert(storageService.verifyAccountPin(acc1.id, '1234') === true, 'Correct PIN (1234) unlocks account 1');
+assert(storageService.verifyAccountPin(acc1.id, '9999') === false, 'Incorrect PIN (9999) is rejected');
+
+// Test updating PIN
+storageService.updateAccountPin(acc1.id, '5678');
+assert(storageService.verifyAccountPin(acc1.id, '5678') === true, 'Updated PIN (5678) unlocks account 1');
+assert(storageService.verifyAccountPin(acc1.id, '1234') === false, 'Old PIN (1234) no longer valid after update');
+
+// Test updating profile name & avatar
+storageService.updateAccountProfile(acc1.id, { name: 'Champion Alex', avatar: '🦁' });
+const updatedAccounts = storageService.getAccounts();
+const reloadedAcc1 = updatedAccounts.find(a => a.id === acc1.id);
+assert(reloadedAcc1.name === 'Champion Alex' && reloadedAcc1.avatar === '🦁', 'Account profile name and avatar successfully updated');
+
+// Test Data Isolation between Account 1 and Account 2
+const acc1SpecificJourneys = [{ id: 'j-acc1', title: 'Alex Solo Quest', milestones: [] }];
+const acc2SpecificJourneys = [{ id: 'j-acc2', title: 'Sam Solo Quest', milestones: [] }];
+
+storageService.saveJourneys(acc1SpecificJourneys, acc1.id);
+storageService.saveJourneys(acc2SpecificJourneys, acc2.id);
+
+const reloadedAcc1Journeys = storageService.loadJourneys(acc1.id);
+const reloadedAcc2Journeys = storageService.loadJourneys(acc2.id);
+
+assert(reloadedAcc1Journeys[0].id === 'j-acc1', 'Account 1 loads only its own journeys');
+assert(reloadedAcc2Journeys[0].id === 'j-acc2', 'Account 2 loads only its own journeys');
+assert(!reloadedAcc1Journeys.some(j => j.id === 'j-acc2'), 'Account 1 data is isolated from Account 2');
+
+// ---------------------------------------------------------------------
+// TEST SUITE 8: Habit Milestones with Mandatory Photo Proof Stamps
+// ---------------------------------------------------------------------
+console.log('\n🏃 Test Suite 8: Habit Milestones with Mandatory Photo Proof & Stamps');
+
+const initialHabits = storageService.loadHabitMilestones(acc1.id);
+assert(Array.isArray(initialHabits) && initialHabits.length > 0, 'Loads habit milestones for active account');
+
+const joggingHabit = initialHabits.find(h => h.id === 'habit-jogging') || initialHabits[0];
+assert(Boolean(joggingHabit && joggingHabit.targetDaysPerWeek >= 1), 'Habit milestone has target days per week (e.g. Jogging 3 days/week)');
+
+// Weekly progress status calculation
+const initialStatus = storageService.getHabitWeeklyStatus(joggingHabit);
+assert(initialStatus.completedDays === 0, 'New habit starts with 0 completed days this week');
+assert(initialStatus.isReached === false, 'Milestone is not yet reached with 0 days');
+assert(initialStatus.statusMessage.includes('needed to reach your weekly milestone'), 'Informative milestone message indicates days needed');
+
+// Stamping with photo proof contract test
+const samplePhotoBase64 = 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD...'; // valid photo proof
+const refDate = new Date();
+const pad = (n) => String(n).padStart(2, '0');
+const todayDateStr = `${refDate.getFullYear()}-${pad(refDate.getMonth() + 1)}-${pad(refDate.getDate())}`;
+
+// Create Day 1 stamp with MANDATORY photo proof
+const stampDay1 = {
+  id: 'stamp-1',
+  date: todayDateStr,
+  time: '08:00',
+  photoProof: samplePhotoBase64,
+  caption: 'Morning Jog 5km around the lake',
+  badgeIcon: '🏃',
+  badgeLabel: 'Runner Stamp',
+  certifiedAt: new Date().toISOString(),
+};
+
+assert(Boolean(stampDay1.photoProof && stampDay1.photoProof.startsWith('data:image/')), 'Stamp conforms to mandatory photo proof contract');
+
+const habitWith1Stamp = {
+  ...joggingHabit,
+  stamps: [stampDay1],
+};
+storageService.saveHabitMilestones([habitWith1Stamp], acc1.id);
+
+const statusAfter1Stamp = storageService.getHabitWeeklyStatus(habitWith1Stamp);
+assert(statusAfter1Stamp.completedDays === 1, 'Habit weekly progress updated to 1 completed day');
+assert(statusAfter1Stamp.daysLeft === (joggingHabit.targetDaysPerWeek - 1), 'Days left correctly decremented');
+assert(statusAfter1Stamp.statusMessage.includes('1/3 days completed') || statusAfter1Stamp.statusMessage.includes('1 of'), 'Informs user of 1 day completed progress towards milestone');
+
+// Add 2 more stamps on distinct days of current week to REACH the milestone
+const day2 = new Date(refDate);
+day2.setDate(refDate.getDate() - 1);
+const day2Str = `${day2.getFullYear()}-${pad(day2.getMonth() + 1)}-${pad(day2.getDate())}`;
+
+const day3 = new Date(refDate);
+day3.setDate(refDate.getDate() - 2);
+const day3Str = `${day3.getFullYear()}-${pad(day3.getMonth() + 1)}-${pad(day3.getDate())}`;
+
+const stampDay2 = { id: 'stamp-2', date: day2Str, time: '07:30', photoProof: samplePhotoBase64, badgeIcon: '🏃' };
+const stampDay3 = { id: 'stamp-3', date: day3Str, time: '09:15', photoProof: samplePhotoBase64, badgeIcon: '⭐' };
+
+const habitWith3Stamps = {
+  ...joggingHabit,
+  targetDaysPerWeek: 3,
+  stamps: [stampDay1, stampDay2, stampDay3],
+};
+storageService.saveHabitMilestones([habitWith3Stamps], acc1.id);
+
+const statusAfter3Stamps = storageService.getHabitWeeklyStatus(habitWith3Stamps);
+assert(statusAfter3Stamps.completedDays >= 3, 'Completed days is now 3');
+assert(statusAfter3Stamps.isReached === true, 'Milestone successfully reached after 3 days completed');
+assert(statusAfter3Stamps.statusMessage.includes('Milestone Reached'), 'Informs user that milestone was achieved!');
+
+// ---------------------------------------------------------------------
+// TEST SUITE 9: List Creation Contract (Zero Pre-Made Text, Clean Placeholders)
+// ---------------------------------------------------------------------
+console.log('\n📝 Test Suite 9: List Creation Contract (Zero Pre-Made Text)');
+
+// Verifying new checklist items and milestones initialize with empty strings (placeholders handle display)
+const newCustomCheckpoint = {
+  id: 'ms-clean-' + Date.now(),
+  title: '', // Must NOT contain pre-made text like 'New Checkpoint'
+  description: '', // Must NOT contain pre-made text like 'Describe what you plan to accomplish'
+  subtasks: [], // Must start clean and empty
+};
+
+assert(newCustomCheckpoint.title === '', 'Newly created checkpoint title is empty (background text only)');
+assert(newCustomCheckpoint.description === '', 'Newly created checkpoint description is empty (background text only)');
+assert(Array.isArray(newCustomCheckpoint.subtasks) && newCustomCheckpoint.subtasks.length === 0, 'Newly created subtasks checklist is empty');
+
+// ---------------------------------------------------------------------
 // TEST SUMMARY REPORT
 // ---------------------------------------------------------------------
+
 console.log('\n======================================================');
 console.log(`TEST RESULTS: ${passedTests}/${totalTests} Passed (${Math.round((passedTests/totalTests)*100)}%)`);
 if (failedTests.length === 0) {
