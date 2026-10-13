@@ -153,14 +153,34 @@ button {
 /* Header Component */
 .header-container {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 18px;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 18px;
   background: #FFFFFF;
   border: var(--border-thick);
   border-radius: var(--radius-bubble);
   box-shadow: var(--card-shadow);
-  margin-bottom: 24px;
+  margin-bottom: 20px;
+}
+
+.header-main-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.header-quick-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.header-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .logo-section {
@@ -619,6 +639,52 @@ button {
   overflow: hidden;
 }
 
+.calendar-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.calendar-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.calendar-icon-bubble {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+  background: var(--pastel-peach);
+  border: 2px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 0 var(--border-color);
+}
+
+.calendar-subtitle {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.calendar-controls-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.calendar-nav-buttons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -639,6 +705,14 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.calendar-empty-cell {
+  background: transparent;
+  min-height: 84px;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .calendar-day-cell {
@@ -668,12 +742,42 @@ button {
   box-shadow: 0 3px 0 #E65100;
 }
 
+.calendar-day-cell.selected-day {
+  border-color: #E65100;
+  background: #FFF8E1;
+  box-shadow: 0 0 0 2px #FFA000, 0 3px 0 #E65100;
+}
+
+.calendar-cell-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.today-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #E65100;
+  box-shadow: 0 0 0 2px #FFE082;
+  display: inline-block;
+}
+
 .calendar-day-number {
   font-family: var(--font-bubble);
   font-weight: 700;
   font-size: 0.85rem;
   margin-bottom: 4px;
   min-width: 0;
+}
+
+.calendar-ms-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  overflow: hidden;
 }
 
 .calendar-ms-pill {
@@ -686,14 +790,57 @@ button {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-top: 2px;
   width: 100%;
   max-width: 100%;
   box-sizing: border-box;
   display: block;
 }
+
 .calendar-ms-pill.completed {
   background: #C8E6C9;
+}
+
+.ms-status-icon {
+  margin-right: 4px;
+  font-weight: 800;
+}
+
+.calendar-ms-more {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--text-muted);
+}
+
+.selected-date-card {
+  margin-top: 20px;
+  padding: 16px;
+  background: #FFF8F2;
+  border-radius: 20px;
+  border: 2px solid var(--border-color);
+}
+
+.selected-date-item, .upcoming-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #FFFFFF;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1.5px solid var(--border-color);
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.selected-date-item:hover, .upcoming-item:hover {
+  transform: translateY(-1px);
+}
+
+.upcoming-checkpoints-card {
+  margin-top: 16px;
+  padding: 16px;
+  background: #FFFDF9;
+  border-radius: 20px;
+  border: 2px solid var(--border-color);
 }
 
 /* STICKER SCRAPBOOK / TROPHY ALBUM */
@@ -759,18 +906,80 @@ button {
 
 /* Responsive adjustments */
 @media (max-width: 640px) {
+  html, body {
+    overflow-x: hidden;
+    width: 100%;
+  }
+
   .app-wrapper {
-    padding: 12px 14px 80px 14px;
+    padding: 10px 12px 76px 12px;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
+  /* Hide redundant top nav tabs on mobile */
+  .nav-pill-tabs {
+    display: none !important;
+  }
+
+  .desktop-only-btn {
+    display: none !important;
   }
   
   .header-container {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
+    padding: 12px 14px;
+    gap: 10px;
+    margin-bottom: 14px;
   }
-  
-  .header-actions {
-    justify-content: space-between;
+
+  .logo-icon-bubble {
+    width: 40px;
+    height: 40px;
+    font-size: 22px;
+    border-radius: 12px;
+  }
+
+  .logo-text h1 {
+    font-size: 1.15rem;
+  }
+
+  .logo-tagline {
+    font-size: 0.72rem;
+  }
+
+  .btn-icon-bubble {
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+  }
+
+  .btn-install-mini {
+    padding: 6px 10px;
+    font-size: 0.78rem;
+    border-radius: 16px;
+  }
+
+  .header-badges-row {
+    width: 100%;
+    gap: 8px;
+    justify-content: flex-start;
+  }
+
+  .badge-pill {
+    padding: 5px 10px;
+    font-size: 0.76rem;
+  }
+
+  /* Roadmap Trail mobile tweaks */
+  .roadmap-container {
+    padding: 18px 12px;
+    border-radius: 24px;
+  }
+
+  .roadmap-header-card {
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    gap: 12px;
   }
 
   .trail-milestone-row.align-left,
@@ -779,16 +988,125 @@ button {
     padding: 0;
   }
 
+  .milestone-node {
+    width: 100%;
+    max-width: 100%;
+    padding: 10px 14px;
+  }
+
+  .node-icon-circle {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    font-size: 20px;
+  }
+
+  /* Calendar Mobile Grid */
+  .calendar-card {
+    padding: 14px 8px;
+    border-radius: 24px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .calendar-header-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .calendar-controls-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .btn-cal-nav {
+    width: 34px;
+    height: 34px;
+  }
+
+  .btn-cal-today {
+    padding: 6px 12px;
+    font-size: 0.78rem;
+  }
+
+  .btn-export-cal {
+    padding: 6px 10px;
+    font-size: 0.74rem;
+  }
+
   .calendar-grid {
-    gap: 4px;
+    gap: 3px;
+    width: 100%;
+    box-sizing: border-box;
   }
+
+  .calendar-weekday {
+    font-size: 0.72rem;
+    padding: 3px 0;
+  }
+
+  .calendar-empty-cell {
+    min-height: 48px;
+  }
+
   .calendar-day-cell {
-    min-height: 60px;
-    padding: 4px;
+    min-height: 48px;
+    padding: 3px 2px;
+    border-radius: 9px;
+    border-width: 1.5px;
   }
+
+  .calendar-day-number {
+    font-size: 0.74rem;
+    margin-bottom: 2px;
+  }
+
+  .today-dot {
+    width: 5px;
+    height: 5px;
+  }
+
+  /* In mobile month cell, show compact icon pills instead of full sentence titles */
+  .calendar-ms-container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2px;
+  }
+
   .calendar-ms-pill {
-    font-size: 0.6rem;
     padding: 1px 3px;
+    font-size: 0.65rem;
+    border-radius: 5px;
+    width: auto;
+    max-width: 100%;
+    border-width: 1px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .calendar-ms-pill .ms-title-text {
+    display: none !important;
+  }
+
+  .calendar-ms-pill .ms-status-icon {
+    margin-right: 0;
+  }
+
+  /* Scrapbook stats 3-column row on mobile */
+  .stats-overview-row {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+  }
+
+  /* Modal tweaks on mobile */
+  .modal-content {
+    padding: 18px 14px;
+    border-radius: 24px;
+    max-height: 88vh;
   }
 
   /* Fixed mobile bottom navigation */
@@ -800,7 +1118,7 @@ button {
     right: 0;
     background: #FFFFFF;
     border-top: var(--border-thick);
-    padding: 8px 12px;
+    padding: 6px 10px;
     justify-content: space-around;
     z-index: 999;
     box-shadow: 0 -4px 12px rgba(0,0,0,0.06);
@@ -819,6 +1137,7 @@ button {
     padding: 4px 10px;
     border-radius: 12px;
   }
+
   .mobile-nav-btn.active {
     color: var(--text-main);
     background: var(--pastel-peach);

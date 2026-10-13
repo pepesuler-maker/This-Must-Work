@@ -30,9 +30,10 @@ export function StickerAlbum({ journeys, streakCount }) {
   });
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Overview Stats Bar */}
       <div 
+        className="stats-overview-row"
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',

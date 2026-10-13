@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Wifi, WifiOff, Volume2, VolumeX, Settings, Download, Flame } from 'lucide-react';
+import { Wifi, WifiOff, Volume2, VolumeX, Settings, Download, Flame } from 'lucide-react';
 import { soundEngine } from '../services/soundEngine';
 
 export function Header({
@@ -40,68 +40,69 @@ export function Header({
 
   return (
     <header className="header-container">
-      <div className="logo-section">
-        <div className="logo-icon-bubble">
-          🌱
+      <div className="header-main-row">
+        <div className="logo-section">
+          <div className="logo-icon-bubble">🌱</div>
+          <div className="logo-text">
+            <h1>BloomTrail</h1>
+            <p className="logo-tagline">Cozy Progression & Milestones</p>
+          </div>
         </div>
-        <div className="logo-text">
-          <h1>BloomTrail</h1>
-          <p className="logo-tagline">Cozy Progression & Milestones</p>
+
+        {/* Quick controls on the right */}
+        <div className="header-quick-controls">
+          {/* Install PWA Button (if available) */}
+          {installPrompt && !isInstalled && (
+            <button 
+              className="btn-bubble btn-mint btn-install-mini"
+              onClick={handleInstallClick}
+              title="Install app to your home screen or desktop!"
+            >
+              <Download size={14} />
+              <span className="install-label">Install</span>
+            </button>
+          )}
+
+          {/* Sound toggle */}
+          <button
+            className="btn-icon-bubble"
+            onClick={() => {
+              soundEngine.playPop();
+              onToggleSound(!soundEnabled);
+            }}
+            title={soundEnabled ? 'Mute Sounds' : 'Unmute Sounds'}
+          >
+            {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+          </button>
+
+          {/* Settings Button (visible on desktop header; mobile has bottom nav) */}
+          <button
+            className="btn-icon-bubble desktop-only-btn"
+            onClick={() => {
+              soundEngine.playPop();
+              onOpenSettings();
+            }}
+            title="Open Settings & Audio Chimes"
+          >
+            <Settings size={18} />
+          </button>
         </div>
       </div>
 
-      <div className="header-actions">
-        {/* Streak Counter */}
+      {/* Badges Row (Streak + Online Status) */}
+      <div className="header-badges-row">
         <div className="badge-pill badge-streak" title="Daily Check-in Streak!">
-          <Flame size={16} fill="#FF8A00" color="#B23A00" />
+          <Flame size={15} fill="#FF8A00" color="#B23A00" />
           <span>{streakCount} Day Streak</span>
         </div>
 
-        {/* Offline / Online Badge */}
         <div 
           className={`badge-pill ${isOnline ? 'badge-online' : 'badge-offline'}`}
           title={isOnline ? 'Connected & Ready to Sync' : 'Offline Mode - Saving locally!'}
         >
-          {isOnline ? <Wifi size={14} /> : <WifiOff size={14} />}
+          {isOnline ? <Wifi size={13} /> : <WifiOff size={13} />}
           <span>{isOnline ? 'Online' : 'Offline'}</span>
         </div>
-
-        {/* Install PWA Button (if available) */}
-        {installPrompt && !isInstalled && (
-          <button 
-            className="btn-bubble btn-mint"
-            onClick={handleInstallClick}
-            style={{ padding: '8px 14px', fontSize: '0.85rem' }}
-            title="Install app to your home screen or desktop!"
-          >
-            <Download size={15} />
-            <span>Install App</span>
-          </button>
-        )}
-
-        {/* Sound toggle */}
-        <button
-          className="btn-icon-bubble"
-          onClick={() => {
-            soundEngine.playPop();
-            onToggleSound(!soundEnabled);
-          }}
-          title={soundEnabled ? 'Mute Sounds' : 'Unmute Sounds'}
-        >
-          {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
-        </button>
-
-        {/* Settings Button */}
-        <button
-          className="btn-icon-bubble"
-          onClick={() => {
-            soundEngine.playPop();
-            onOpenSettings();
-          }}
-          title="Open Settings & Audio Chimes"
-        >
-          <Settings size={18} />
-        </button>
       </div>
     </header>
   );
