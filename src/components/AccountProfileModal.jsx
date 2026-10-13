@@ -1,45 +1,44 @@
 import React, { useState } from 'react';
 import { 
-  X, Lock, Unlock, KeyRound, Check, Edit3, ArrowLeft 
+  X, Lock, Unlock, KeyRound, Check, Edit3, ArrowLeft, Plus, Sparkles 
 } from 'lucide-react';
 import { soundEngine } from '../services/soundEngine';
 import { storageService } from '../services/storageService';
 
-const AVATARS = ['🦊', '🐼', '🐱', '🐻', '🐰', '🦁', '🐨', '🦄', '🐧', '🐶', '🐯', '🐙'];
+const AVATARS = ['🦊', '🐼', '🐱', '🐻', '🐰', '🦁', '🐨', '🦄', '🌸', '🌱', '🚀', '⭐'];
+const THEME_COLORS = ['#FF9AA2', '#B5EAEA', '#FFDAC1', '#E2F0CB', '#FFB7B2', '#DED2F9'];
 
 export function AccountProfileModal({
   accounts,
   activeAccountId,
   onSelectAccount,
+  onAccountCreated,
   onClose,
-  initialMode = 'select', // 'select' | 'enter_pin' | 'edit_profile'
+  initialMode = 'enter_pin', // 'enter_pin' | 'add_account' | 'edit_profile' | 'change_pin'
   targetAccountForPin = null,
 }) {
-  const [mode, setMode] = useState(initialMode); // 'select' | 'enter_pin' | 'edit_profile' | 'change_pin'
+  const [mode, setMode] = useState(initialMode);
   const [selectedAcc, setSelectedAcc] = useState(targetAccountForPin || null);
   const [pinInput, setPinInput] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isShaking, setIsShaking] = useState(false);
 
+  // Add account states (clean placeholders, zero pre-made text)
+  const [addName, setAddName] = useState('');
+  const [addAvatar, setAddAvatar] = useState(AVATARS[0]);
+  const [addPin, setAddPin] = useState('1234');
+  const [addThemeColor, setAddThemeColor] = useState(THEME_COLORS[0]);
+
   // Edit profile states
-  const [editName, setEditName] = useState('');
-  const [editAvatar, setEditAvatar] = useState('🦊');
-  const [editBio, setEditBio] = useState('');
+  const [editName, setEditName] = useState(selectedAcc?.name || '');
+  const [editAvatar, setEditAvatar] = useState(selectedAcc?.avatar || '🦊');
+  const [editBio, setEditBio] = useState(selectedAcc?.bio || '');
 
   // Change PIN states
   const [oldPin, setOldPin] = useState('');
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [pinSuccessMsg, setPinSuccessMsg] = useState('');
-
-  // Handle selecting an account tile
-  const handleAccountClick = (acc) => {
-    soundEngine.playPop();
-    setSelectedAcc(acc);
-    setPinInput('');
-    setErrorMessage('');
-    setMode('enter_pin');
-  };
 
   // Handle numeric keypad input
   const handleKeypadPress = (val) => {
@@ -53,7 +52,6 @@ export function AccountProfileModal({
         const next = pinInput + val;
         setPinInput(next);
         if (next.length === 4) {
-          // Auto check on 4 digits
           attemptUnlock(next, selectedAcc);
         }
       }
@@ -77,15 +75,25 @@ export function AccountProfileModal({
     }
   };
 
-  // Open profile editor
-  const handleOpenEdit = (acc, e) => {
-    e.stopPropagation();
-    soundEngine.playPop();
-    setSelectedAcc(acc);
-    setEditName(acc.name);
-    setEditAvatar(acc.avatar);
-    setEditBio(acc.bio || '');
-    setMode('edit_profile');
+  // Handle creating a brand new account
+  const handleCreateAccount = (e) => {
+    e.preventDefault();
+    if (!addName.trim()) return;
+
+    soundEngine.playSuccess();
+    const newAcc = storageService.addAccount({
+      name: addName.trim(),
+      avatar: addAvatar,
+      pin: addPin || '1234',
+      themeColor: addThemeColor,
+    });
+
+    if (onAccountCreated) {
+      onAccountCreated(newAcc);
+    } else {
+      onSelectAccount(newAcc.id);
+    }
+    onClose();
   };
 
   // Save profile changes
@@ -99,19 +107,7 @@ export function AccountProfileModal({
       avatar: editAvatar,
       bio: editBio.trim(),
     });
-    setMode('select');
-  };
-
-  // Open change PIN
-  const handleOpenChangePin = (acc) => {
-    soundEngine.playPop();
-    setSelectedAcc(acc);
-    setOldPin('');
-    setNewPin('');
-    setConfirmPin('');
-    setErrorMessage('');
-    setPinSuccessMsg('');
-    setMode('change_pin');
+    onClose();
   };
 
   // Save new PIN
@@ -134,7 +130,7 @@ export function AccountProfileModal({
     soundEngine.playSuccess();
     setPinSuccessMsg('PIN successfully updated! 🎉');
     setTimeout(() => {
-      setMode('select');
+      onClose();
     }, 1200);
   };
 
@@ -143,35 +139,23 @@ export function AccountProfileModal({
       <div 
         className="modal-content netflix-account-modal"
         onClick={(e) => e.stopPropagation()}
-        style={{ maxWidth: mode === 'select' ? 640 : 440, padding: '24px' }}
+        style={{ maxWidth: 440, padding: '24px' }}
       >
         {/* Header */}
         <div className="modal-header" style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            {mode !== 'select' && (
-              <button 
-                type="button" 
-                className="btn-icon-bubble"
-                onClick={() => {
-                  soundEngine.playPop();
-                  setMode('select');
-                  setErrorMessage('');
-                }}
-                style={{ width: 34, height: 34 }}
-              >
-                <ArrowLeft size={16} />
-              </button>
-            )}
-            <div style={{ fontSize: 24 }}>📺</div>
+            <div style={{ fontSize: 24 }}>
+              {mode === 'add_account' ? '✨' : '🔒'}
+            </div>
             <div>
               <h2 style={{ fontSize: '1.25rem', lineHeight: 1.2 }}>
-                {mode === 'select' && "Who's Blooming?"}
-                {mode === 'enter_pin' && `Enter PIN for ${selectedAcc?.name}`}
+                {mode === 'enter_pin' && `Unlock: ${selectedAcc?.name}`}
+                {mode === 'add_account' && 'Create New Account'}
                 {mode === 'edit_profile' && `Edit Profile: ${selectedAcc?.name}`}
                 {mode === 'change_pin' && `Change PIN: ${selectedAcc?.name}`}
               </h2>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700 }}>
-                {mode === 'select' ? 'Select an account to access isolated quests & stamps' : 'Netflix-Style PIN Protection'}
+                {mode === 'add_account' ? 'Create a profile with custom PIN' : 'PIN Password Security'}
               </p>
             </div>
           </div>
@@ -182,130 +166,7 @@ export function AccountProfileModal({
         </div>
 
         {/* ----------------------------------------------------------- */}
-        {/* VIEW 1: Profile Chooser (4 Accounts)                         */}
-        {/* ----------------------------------------------------------- */}
-        {mode === 'select' && (
-          <div>
-            <div className="netflix-profiles-grid">
-              {accounts.map((acc) => {
-                const isActive = acc.id === activeAccountId;
-
-                return (
-                  <div
-                    key={acc.id}
-                    className={`netflix-profile-card ${isActive ? 'active-profile' : ''}`}
-                    onClick={() => handleAccountClick(acc)}
-                    style={{
-                      background: '#FFFFFF',
-                      border: `2.5px solid ${isActive ? 'var(--pastel-coral)' : 'var(--border-color)'}`,
-                      borderRadius: 22,
-                      padding: '18px 12px',
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      position: 'relative',
-                      boxShadow: isActive ? '0 5px 0 var(--pastel-coral)' : '0 4px 0 var(--border-color)',
-                      transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-                    }}
-                  >
-                    {/* Active badge */}
-                    {isActive && (
-                      <span 
-                        style={{
-                          position: 'absolute',
-                          top: 8,
-                          left: 8,
-                          background: 'var(--pastel-coral)',
-                          color: '#FFFFFF',
-                          fontSize: '0.65rem',
-                          fontWeight: 800,
-                          padding: '2px 6px',
-                          borderRadius: 8,
-                        }}
-                      >
-                        CURRENT
-                      </span>
-                    )}
-
-                    {/* Lock Indicator */}
-                    <div 
-                      style={{
-                        position: 'absolute',
-                        top: 8,
-                        right: 8,
-                        background: '#FFF3E0',
-                        border: '1.5px solid var(--border-color)',
-                        borderRadius: '50%',
-                        width: 22,
-                        height: 22,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                      title="PIN Password Protected"
-                    >
-                      <Lock size={11} color="#E65100" />
-                    </div>
-
-                    {/* Avatar Icon */}
-                    <div 
-                      className="netflix-avatar-circle"
-                      style={{
-                        width: 68,
-                        height: 68,
-                        borderRadius: 24,
-                        background: acc.themeColor || 'var(--pastel-peach)',
-                        border: '2.5px solid var(--border-color)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 34,
-                        margin: '6px auto 10px',
-                        boxShadow: '0 3px 0 var(--border-color)',
-                      }}
-                    >
-                      {acc.avatar}
-                    </div>
-
-                    <h3 style={{ fontSize: '1.1rem', marginBottom: 2 }}>{acc.name}</h3>
-                    <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, minHeight: 18 }}>
-                      {acc.bio || 'Cozy Explorer'}
-                    </p>
-
-                    {/* Quick Edit button */}
-                    <button
-                      type="button"
-                      className="btn-bubble btn-cream"
-                      style={{ padding: '4px 10px', fontSize: '0.72rem', marginTop: 10, width: '100%' }}
-                      onClick={(e) => handleOpenEdit(acc, e)}
-                    >
-                      <Edit3 size={11} />
-                      <span>Edit / PIN</span>
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div 
-              style={{ 
-                marginTop: 18, 
-                padding: '10px 14px', 
-                background: '#FFF9F2', 
-                borderRadius: 14, 
-                border: '1.5px solid var(--border-subtle)',
-                fontSize: '0.8rem',
-                color: 'var(--text-muted)',
-                fontWeight: 700,
-                textAlign: 'center',
-              }}
-            >
-              🔒 All 4 profiles are isolated. Default PIN for each account is <strong>1234</strong>.
-            </div>
-          </div>
-        )}
-
-        {/* ----------------------------------------------------------- */}
-        {/* VIEW 2: PIN Password Entry Pad (Netflix Style)               */}
+        {/* VIEW 1: ENTER PIN TO UNLOCK                                  */}
         {/* ----------------------------------------------------------- */}
         {mode === 'enter_pin' && selectedAcc && (
           <div style={{ textAlign: 'center' }}>
@@ -329,10 +190,9 @@ export function AccountProfileModal({
 
             <h3 style={{ fontSize: '1.15rem' }}>{selectedAcc.name}</h3>
             <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: 14 }}>
-              Enter 4-digit PIN to unlock
+              Enter 4-digit PIN to switch to this account
             </p>
 
-            {/* Error Message with Shake */}
             {errorMessage && (
               <div 
                 className={isShaking ? 'shake-animation' : ''}
@@ -351,7 +211,7 @@ export function AccountProfileModal({
               </div>
             )}
 
-            {/* PIN Dots Display */}
+            {/* PIN Dots */}
             <div 
               style={{ 
                 display: 'flex', 
@@ -380,7 +240,7 @@ export function AccountProfileModal({
               })}
             </div>
 
-            {/* Numeric Keypad Buttons */}
+            {/* Keypad */}
             <div 
               style={{
                 display: 'grid',
@@ -427,13 +287,12 @@ export function AccountProfileModal({
               </button>
             </div>
 
-            {/* Unlock Button */}
             <div style={{ display: 'flex', gap: 10 }}>
               <button
                 type="button"
                 className="btn-bubble btn-cream"
                 style={{ flex: 1, padding: '10px' }}
-                onClick={() => setMode('select')}
+                onClick={onClose}
               >
                 Cancel
               </button>
@@ -456,11 +315,124 @@ export function AccountProfileModal({
         )}
 
         {/* ----------------------------------------------------------- */}
-        {/* VIEW 3: Edit Profile                                         */}
+        {/* VIEW 2: ADD ACCOUNT MODAL                                    */}
+        {/* ----------------------------------------------------------- */}
+        {mode === 'add_account' && (
+          <form onSubmit={handleCreateAccount}>
+            {/* Avatar Picker */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+                Choose Profile Avatar
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {AVATARS.map((av) => (
+                  <button
+                    key={av}
+                    type="button"
+                    className="btn-icon-bubble"
+                    style={{
+                      fontSize: 22,
+                      background: addAvatar === av ? 'var(--pastel-peach)' : '#FFFFFF',
+                      transform: addAvatar === av ? 'scale(1.15)' : 'none',
+                    }}
+                    onClick={() => {
+                      soundEngine.playPop();
+                      setAddAvatar(av);
+                    }}
+                  >
+                    {av}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Account Name (Clean placeholder background text) */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+                Account Name
+              </label>
+              <input
+                type="text"
+                className="input-bubble"
+                value={addName}
+                onChange={(e) => setAddName(e.target.value)}
+                placeholder="e.g. Alex, Sam, Explorer..."
+                autoFocus
+                required
+              />
+            </div>
+
+            {/* PIN (Password) */}
+            <div style={{ marginBottom: 14 }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+                Account Password / PIN (4 digits)
+              </label>
+              <input
+                type="password"
+                className="input-bubble"
+                maxLength={6}
+                value={addPin}
+                onChange={(e) => setAddPin(e.target.value)}
+                placeholder="Set 4-digit PIN (e.g. 1234)"
+                required
+              />
+            </div>
+
+            {/* Theme Color */}
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
+                Badge Color
+              </label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {THEME_COLORS.map((col) => (
+                  <button
+                    key={col}
+                    type="button"
+                    onClick={() => {
+                      soundEngine.playPop();
+                      setAddThemeColor(col);
+                    }}
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 10,
+                      background: col,
+                      border: '2px solid var(--border-color)',
+                      boxShadow: addThemeColor === col ? '0 0 0 3px var(--border-color)' : 'none',
+                      cursor: 'pointer',
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                type="button"
+                className="btn-bubble btn-cream"
+                style={{ flex: 1, padding: '10px' }}
+                onClick={onClose}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="submit"
+                className="btn-bubble btn-mint"
+                style={{ flex: 2, padding: '10px' }}
+              >
+                <Sparkles size={16} />
+                <span>Create Account</span>
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* ----------------------------------------------------------- */}
+        {/* VIEW 3: EDIT PROFILE                                         */}
         {/* ----------------------------------------------------------- */}
         {mode === 'edit_profile' && selectedAcc && (
           <form onSubmit={handleSaveProfile}>
-            {/* Avatar Picker */}
             <div style={{ marginBottom: 14 }}>
               <label style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
                 Choose Profile Avatar
@@ -487,7 +459,6 @@ export function AccountProfileModal({
               </div>
             </div>
 
-            {/* Name Input (Background placeholder, no hardcoded garbage) */}
             <div style={{ marginBottom: 14 }}>
               <label style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
                 Account Name
@@ -502,10 +473,9 @@ export function AccountProfileModal({
               />
             </div>
 
-            {/* Bio Input */}
             <div style={{ marginBottom: 18 }}>
               <label style={{ fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-muted)', display: 'block', marginBottom: 6 }}>
-                Profile Tagline / Bio
+                Bio / Tagline
               </label>
               <input
                 type="text"
@@ -516,16 +486,15 @@ export function AccountProfileModal({
               />
             </div>
 
-            {/* Change PIN shortcut */}
             <div style={{ marginBottom: 20 }}>
               <button
                 type="button"
                 className="btn-bubble btn-cream"
                 style={{ width: '100%', padding: '10px' }}
-                onClick={() => handleOpenChangePin(selectedAcc)}
+                onClick={() => setMode('change_pin')}
               >
                 <KeyRound size={16} />
-                <span>Change Account Password / PIN</span>
+                <span>Change PIN Password</span>
               </button>
             </div>
 
@@ -534,7 +503,7 @@ export function AccountProfileModal({
                 type="button"
                 className="btn-bubble btn-cream"
                 style={{ flex: 1, padding: '10px' }}
-                onClick={() => setMode('select')}
+                onClick={onClose}
               >
                 Cancel
               </button>
@@ -552,7 +521,7 @@ export function AccountProfileModal({
         )}
 
         {/* ----------------------------------------------------------- */}
-        {/* VIEW 4: Change PIN                                           */}
+        {/* VIEW 4: CHANGE PIN                                           */}
         {/* ----------------------------------------------------------- */}
         {mode === 'change_pin' && selectedAcc && (
           <form onSubmit={handleSaveNewPin}>
@@ -640,7 +609,7 @@ export function AccountProfileModal({
                 type="button"
                 className="btn-bubble btn-cream"
                 style={{ flex: 1, padding: '10px' }}
-                onClick={() => setMode('select')}
+                onClick={onClose}
               >
                 Cancel
               </button>

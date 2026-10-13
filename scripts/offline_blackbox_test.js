@@ -276,15 +276,23 @@ if (triggeredAlarm) {
 }
 
 // ---------------------------------------------------------------------
-// TEST SUITE 7: Netflix 4-Account Profile Management & PIN Password Security
+// TEST SUITE 7: Dynamic Account Creation, Top-Left Placement & PIN Security
 // ---------------------------------------------------------------------
-console.log('\n📺 Test Suite 7: Netflix 4-Account Profile & PIN Password Security');
+console.log('\n📺 Test Suite 7: Dynamic Account Creation & PIN Security Contract');
+
+// Test creating an account via Add Account
+const createdAcc1 = storageService.addAccount({
+  name: 'Alex',
+  avatar: '🦊',
+  pin: '1234',
+  themeColor: '#FF9AA2',
+});
+assert(Boolean(createdAcc1.id && createdAcc1.name === 'Alex' && createdAcc1.avatar === '🦊'), 'Creates new account dynamically via Add Account button');
 
 const accounts = storageService.getAccounts();
-assert(Array.isArray(accounts) && accounts.length === 4, 'Provides exactly 4 Netflix-style isolated accounts');
+assert(Array.isArray(accounts) && accounts.length >= 1, 'Accounts list dynamically tracks user-created accounts');
 
-const [acc1, acc2, acc3, acc4] = accounts;
-assert(Boolean(acc1.id && acc1.name && acc1.avatar && acc1.pin), 'Account structure has id, name, avatar, and pin');
+const acc1 = accounts.find(a => a.id === createdAcc1.id) || accounts[0];
 
 // Verify PIN security
 assert(storageService.verifyAccountPin(acc1.id, '1234') === true, 'Correct PIN (1234) unlocks account 1');
@@ -301,19 +309,28 @@ const updatedAccounts = storageService.getAccounts();
 const reloadedAcc1 = updatedAccounts.find(a => a.id === acc1.id);
 assert(reloadedAcc1.name === 'Champion Alex' && reloadedAcc1.avatar === '🦁', 'Account profile name and avatar successfully updated');
 
+// Test adding a second account dynamically
+const createdAcc2 = storageService.addAccount({
+  name: 'Sam',
+  avatar: '🐼',
+  pin: '4321',
+});
+assert(storageService.getAccounts().length >= 2, 'Multiple accounts can be created and switched');
+
 // Test Data Isolation between Account 1 and Account 2
 const acc1SpecificJourneys = [{ id: 'j-acc1', title: 'Alex Solo Quest', milestones: [] }];
 const acc2SpecificJourneys = [{ id: 'j-acc2', title: 'Sam Solo Quest', milestones: [] }];
 
 storageService.saveJourneys(acc1SpecificJourneys, acc1.id);
-storageService.saveJourneys(acc2SpecificJourneys, acc2.id);
+storageService.saveJourneys(acc2SpecificJourneys, createdAcc2.id);
 
 const reloadedAcc1Journeys = storageService.loadJourneys(acc1.id);
-const reloadedAcc2Journeys = storageService.loadJourneys(acc2.id);
+const reloadedAcc2Journeys = storageService.loadJourneys(createdAcc2.id);
 
 assert(reloadedAcc1Journeys[0].id === 'j-acc1', 'Account 1 loads only its own journeys');
 assert(reloadedAcc2Journeys[0].id === 'j-acc2', 'Account 2 loads only its own journeys');
 assert(!reloadedAcc1Journeys.some(j => j.id === 'j-acc2'), 'Account 1 data is isolated from Account 2');
+
 
 // ---------------------------------------------------------------------
 // TEST SUITE 8: Habit Milestones with Mandatory Photo Proof Stamps

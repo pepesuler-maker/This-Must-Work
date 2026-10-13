@@ -9,6 +9,7 @@ import { CalendarView } from './components/CalendarView';
 import { StickerAlbum } from './components/StickerAlbum';
 import { HabitMilestonesView } from './components/HabitMilestonesView';
 import { AccountProfileModal } from './components/AccountProfileModal';
+import { BlankLandingView } from './components/BlankLandingView';
 import { MilestoneModal } from './components/MilestoneModal';
 import { SettingsModal } from './components/SettingsModal';
 import { NewJourneyModal } from './components/NewJourneyModal';
@@ -19,10 +20,12 @@ import { soundEngine } from './services/soundEngine';
 import { notificationService } from './services/notificationService';
 
 export default function App() {
-  // Accounts (Netflix-style 4 Accounts with PIN Password)
+  // Accounts
   const [accounts, setAccounts] = useState(() => storageService.getAccounts());
   const [activeAccountId, setActiveAccountId] = useState(() => storageService.getActiveAccountId());
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [accountModalMode, setAccountModalMode] = useState('add_account'); // 'add_account' | 'enter_pin' | 'edit_profile' | 'change_pin'
+  const [targetAccountForPin, setTargetAccountForPin] = useState(null);
 
   // Per-account data
   const [journeys, setJourneys] = useState(() => storageService.loadJourneys(activeAccountId));
@@ -39,7 +42,7 @@ export default function App() {
   const [isArchivedModalOpen, setIsArchivedModalOpen] = useState(false);
   const [activeAlarmData, setActiveAlarmData] = useState(null);
 
-  const activeAccount = accounts.find((a) => a.id === activeAccountId) || accounts[0];
+  const activeAccount = accounts.find((a) => a.id === activeAccountId) || null;
 
   // Set sound engine parameters
   useEffect(() => {
@@ -80,22 +83,25 @@ export default function App() {
 
   // Sync journeys & habits to local storage whenever changed
   useEffect(() => {
-    storageService.saveJourneys(journeys, activeAccountId);
+    if (activeAccountId) {
+      storageService.saveJourneys(journeys, activeAccountId);
+    }
   }, [journeys, activeAccountId]);
 
   useEffect(() => {
-    storageService.saveHabitMilestones(habits, activeAccountId);
+    if (activeAccountId) {
+      storageService.saveHabitMilestones(habits, activeAccountId);
+    }
   }, [habits, activeAccountId]);
 
-  // Handle switching active account (Netflix style)
+  // Handle switching active account
   const handleSelectAccount = (newAccId) => {
     storageService.setActiveAccountId(newAccId);
     setActiveAccountId(newAccId);
 
-    // Refresh accounts list in case name/avatar was updated
-    setAccounts(storageService.getAccounts());
+    const freshAccounts = storageService.getAccounts();
+    setAccounts(freshAccounts);
 
-    // Load newly selected account's isolated data
     const loadedJourneys = storageService.loadJourneys(newAccId);
     const loadedHabits = storageService.loadHabitMilestones(newAccId);
     const loadedSettings = storageService.loadSettings(newAccId);
@@ -104,6 +110,13 @@ export default function App() {
     setHabits(loadedHabits);
     setSettings(loadedSettings);
     setActiveJourneyId(loadedJourneys[0]?.id || '');
+  };
+
+  // Handle account creation
+  const handleAccountCreated = (newAcc) => {
+    const freshAccounts = storageService.getAccounts();
+    setAccounts(freshAccounts);
+    handleSelectAccount(newAcc.id);
   };
 
   // Separate active and archived journeys
@@ -154,7 +167,6 @@ export default function App() {
     }
   };
 
-  // Helper for reliable local date string (YYYY-MM-DD)
   const getLocalDateString = (d = new Date()) => {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, '0');
@@ -162,13 +174,13 @@ export default function App() {
     return `${y}-${m}-${day}`;
   };
 
-  // Add a new milestone to a journey and open modal (ZERO pre-made text, placeholder background text only)
+  // Add a new milestone to a journey (Zero pre-made text)
   const handleAddMilestone = (prefillDate = '', targetJourneyId = null) => {
     soundEngine.playPop();
     const newMs = {
       id: 'ms-' + Date.now(),
-      title: '', // Empty background placeholder
-      description: '', // Empty background placeholder
+      title: '',
+      description: '',
       status: 'in_progress',
       targetDate: prefillDate || getLocalDateString(),
       reminderTime: '10:00',
@@ -176,7 +188,7 @@ export default function App() {
       rewardSticker: '🌱 Little Sprout',
       reflection: '',
       completedAt: null,
-      subtasks: [], // Starts clean and empty
+      subtasks: [],
     };
 
     const effectiveJourneyId = targetJourneyId 
@@ -188,7 +200,7 @@ export default function App() {
       const defaultJ = {
         id: 'journey-' + Date.now(),
         title: '🌱 Cozy Adventure',
-        description: 'My adventure trail',
+        description: '',
         icon: '🌱',
         themeColor: '#7BDCB5',
         createdAt: new Date().toISOString(),
@@ -212,7 +224,7 @@ export default function App() {
     setSelectedMilestone(newMs);
   };
 
-  // Directly create a checkpoint on a date without popup delay (ZERO pre-made text)
+  // Directly create a checkpoint on a date without popup delay (Zero pre-made text)
   const handleAddMilestoneDirect = ({
     title = '',
     journeyId = null,
@@ -243,7 +255,7 @@ export default function App() {
       const defaultJ = {
         id: 'journey-' + Date.now(),
         title: '🌱 Cozy Adventure',
-        description: 'My adventure trail',
+        description: '',
         icon: '🌱',
         themeColor: '#7BDCB5',
         createdAt: new Date().toISOString(),
@@ -265,7 +277,6 @@ export default function App() {
     }
   };
 
-  // Update a milestone
   const handleUpdateMilestone = (updatedMs) => {
     const updatedJourneys = journeys.map((j) => {
       if (j.milestones.some((m) => m.id === updatedMs.id)) {
@@ -279,7 +290,6 @@ export default function App() {
     setJourneys(updatedJourneys);
   };
 
-  // Delete a milestone
   const handleDeleteMilestone = (msId) => {
     const updatedJourneys = journeys.map((j) => {
       return {
@@ -290,16 +300,47 @@ export default function App() {
     setJourneys(updatedJourneys);
   };
 
-  // Create a new journey roadmap
   const handleCreateJourney = (newJourney) => {
     const updated = [...journeys, newJourney];
     setJourneys(updated);
     setActiveJourneyId(newJourney.id);
   };
 
+  // If no account exists or active account is locked, render almost blank page with ONLY "Add Account" button
+  if (!activeAccount || accounts.length === 0) {
+    return (
+      <div className="app-wrapper">
+        <BlankLandingView
+          accounts={accounts}
+          onOpenAddAccount={() => {
+            setAccountModalMode('add_account');
+            setIsAccountModalOpen(true);
+          }}
+          onUnlockAccount={(acc) => {
+            setTargetAccountForPin(acc);
+            setAccountModalMode('enter_pin');
+            setIsAccountModalOpen(true);
+          }}
+        />
+
+        {isAccountModalOpen && (
+          <AccountProfileModal
+            accounts={accounts}
+            activeAccountId={activeAccountId}
+            initialMode={accountModalMode}
+            targetAccountForPin={targetAccountForPin}
+            onSelectAccount={handleSelectAccount}
+            onAccountCreated={handleAccountCreated}
+            onClose={() => setIsAccountModalOpen(false)}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="app-wrapper">
-      {/* App Header with Netflix Account Switcher */}
+      {/* App Header with Top-Left Account Pop-up with Good Placement */}
       <Header
         isOnline={isOnline}
         streakCount={settings.streakCount || 1}
@@ -311,7 +352,25 @@ export default function App() {
         }}
         onOpenSettings={() => setIsSettingsOpen(true)}
         activeAccount={activeAccount}
-        onOpenAccounts={() => setIsAccountModalOpen(true)}
+        accounts={accounts}
+        onSelectAccountPrompt={(acc) => {
+          setTargetAccountForPin(acc);
+          setAccountModalMode('enter_pin');
+          setIsAccountModalOpen(true);
+        }}
+        onOpenAddAccount={() => {
+          setAccountModalMode('add_account');
+          setIsAccountModalOpen(true);
+        }}
+        onOpenEditProfile={() => {
+          setTargetAccountForPin(activeAccount);
+          setAccountModalMode('edit_profile');
+          setIsAccountModalOpen(true);
+        }}
+        onLockSession={() => {
+          storageService.setActiveAccountId(null);
+          setActiveAccountId(null);
+        }}
       />
 
       {/* Main View Tabs (Desktop & Tablet) */}
@@ -361,7 +420,7 @@ export default function App() {
         </button>
       </div>
 
-      {/* Roadmaps Switcher Chips (visible when on roadmap view) */}
+      {/* Roadmaps Switcher Chips */}
       {activeTab === 'roadmap' && (
         <div className="journey-chips-bar">
           <div className="journey-chips-scroller">
@@ -396,7 +455,6 @@ export default function App() {
               <span>New Quest</span>
             </button>
 
-            {/* Archived Trails Chip */}
             {archivedJourneys.length > 0 && (
               <button
                 className="journey-chip chip-archived"
@@ -548,17 +606,20 @@ export default function App() {
         />
       )}
 
-      {/* Netflix Profile Modal (4 Accounts with PIN Password) */}
+      {/* Account Profile Modal (Add account, enter PIN, or edit) */}
       {isAccountModalOpen && (
         <AccountProfileModal
           accounts={accounts}
           activeAccountId={activeAccountId}
+          initialMode={accountModalMode}
+          targetAccountForPin={targetAccountForPin}
           onSelectAccount={handleSelectAccount}
+          onAccountCreated={handleAccountCreated}
           onClose={() => setIsAccountModalOpen(false)}
         />
       )}
 
-      {/* Active Alarm / Reminder Ringtone Pop-up */}
+      {/* Active Alarm Modal */}
       {activeAlarmData && (
         <AlarmAlertModal
           alertData={activeAlarmData}

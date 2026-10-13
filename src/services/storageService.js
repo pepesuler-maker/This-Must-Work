@@ -1,4 +1,4 @@
-// Local-First Storage & Offline State Management with 4 Netflix Profiles & Habit Milestone Photo Stamps
+// Local-First Storage & Offline State Management with Top-Left Account Pop-up & Habit Milestone Photo Stamps
 
 const STORAGE_KEY_LEGACY_JOURNEYS = 'bloomtrail_journeys_v1';
 const STORAGE_KEY_LEGACY_SETTINGS = 'bloomtrail_settings_v1';
@@ -6,47 +6,7 @@ const STORAGE_KEY_LEGACY_SETTINGS = 'bloomtrail_settings_v1';
 const STORAGE_KEY_ACCOUNTS = 'bloomtrail_accounts_v2';
 const STORAGE_KEY_ACTIVE_ACCOUNT_ID = 'bloomtrail_active_account_id_v2';
 
-// 4 Predefined Netflix-Style Accounts with PIN Protection
-const DEFAULT_ACCOUNTS = [
-  {
-    id: 'acc-1',
-    name: 'Alex',
-    avatar: '🦊',
-    pin: '1234',
-    themeColor: '#FF9AA2',
-    bio: 'Explorer of cozy quests & daily runs 🏃',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'acc-2',
-    name: 'Sam',
-    avatar: '🐼',
-    pin: '1234',
-    themeColor: '#B5EAEA',
-    bio: 'Mindfulness & peaceful adventures 🌸',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'acc-3',
-    name: 'Taylor',
-    avatar: '🐱',
-    pin: '1234',
-    themeColor: '#FFDAC1',
-    bio: 'Coding wizard & craft creator 💻',
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'acc-4',
-    name: 'Jordan',
-    avatar: '🐻',
-    pin: '1234',
-    themeColor: '#E2F0CB',
-    bio: 'Hiking, outdoor trails & healthy habits 🌲',
-    createdAt: new Date().toISOString(),
-  },
-];
-
-// Default cozy starter roadmaps (used for account 1 initial seed or fallback)
+// Default cozy starter roadmaps (used for account initial seed or fallback)
 const DEFAULT_JOURNEYS = [
   {
     id: 'journey-webdev',
@@ -191,13 +151,13 @@ const DEFAULT_HABIT_MILESTONES = [
   {
     id: 'habit-jogging',
     title: 'Jogging',
-    targetDaysPerWeek: 3, // 3 days minimum a week
+    targetDaysPerWeek: 3,
     icon: '🏃',
     themeColor: '#FF9AA2',
     description: 'Jog 3 days minimum a week. Mandatory picture proof required for every stamp!',
     category: 'Fitness',
     createdAt: new Date().toISOString(),
-    stamps: [], // completed stamps with mandatory picture proof
+    stamps: [],
   },
   {
     id: 'habit-reading',
@@ -224,7 +184,7 @@ const DEFAULT_SETTINGS = {
 
 export const storageService = {
   // ---------------------------------------------------------------------
-  // Netflix-Style Account Management (4 Accounts with PIN Password)
+  // Dynamic User Accounts (Top-Left Pop-Up & PIN Protection)
   // ---------------------------------------------------------------------
 
   getAccounts() {
@@ -232,16 +192,34 @@ export const storageService = {
       const data = localStorage.getItem(STORAGE_KEY_ACCOUNTS);
       if (data) {
         const parsed = JSON.parse(data);
-        if (Array.isArray(parsed) && parsed.length >= 4) {
-          return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Filter out extra mock Netflix accounts (acc-2, acc-3, acc-4) if they were auto-seeded
+          // but preserve acc-1 (Alex) and any custom accounts created by the user
+          const cleaned = parsed.filter(a => a.id === 'acc-1' || (!['acc-2', 'acc-3', 'acc-4'].includes(a.id)));
+          return cleaned.length > 0 ? cleaned : parsed;
         }
+      }
+
+      // Check if user already had legacy data or active account (preserve Alex and user's quests)
+      const legacyJourneys = localStorage.getItem(STORAGE_KEY_LEGACY_JOURNEYS);
+      const acc1Journeys = localStorage.getItem('bloomtrail_acc_acc-1_journeys_v2');
+      if (legacyJourneys || acc1Journeys) {
+        const initialAcc = [{
+          id: 'acc-1',
+          name: 'Alex',
+          avatar: '🦊',
+          pin: '1234',
+          themeColor: '#FF9AA2',
+          bio: 'Cozy Explorer',
+          createdAt: new Date().toISOString(),
+        }];
+        this.saveAccounts(initialAcc);
+        return initialAcc;
       }
     } catch (e) {
       console.error('Failed to load accounts', e);
     }
-    // Seed default 4 accounts
-    this.saveAccounts(DEFAULT_ACCOUNTS);
-    return DEFAULT_ACCOUNTS;
+    return [];
   },
 
   saveAccounts(accounts) {
@@ -252,24 +230,56 @@ export const storageService = {
     }
   },
 
+  addAccount({ name, avatar = '🦊', pin = '1234', themeColor = '#FF9AA2', bio = '' }) {
+    const accounts = this.getAccounts();
+    const newAcc = {
+      id: 'acc-' + Date.now(),
+      name: name.trim() || 'New Explorer',
+      avatar: avatar || '🦊',
+      pin: String(pin || '1234').trim(),
+      themeColor: themeColor || '#FF9AA2',
+      bio: bio.trim(),
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [...accounts, newAcc];
+    this.saveAccounts(updated);
+    this.setActiveAccountId(newAcc.id);
+    return newAcc;
+  },
+
+  deleteAccount(accId) {
+    const accounts = this.getAccounts();
+    const updated = accounts.filter((a) => a.id !== accId);
+    this.saveAccounts(updated);
+    if (this.getActiveAccountId() === accId) {
+      this.setActiveAccountId(updated[0]?.id || null);
+    }
+    return updated;
+  },
+
   getActiveAccountId() {
     try {
       const id = localStorage.getItem(STORAGE_KEY_ACTIVE_ACCOUNT_ID);
-      if (id) {
-        const accounts = this.getAccounts();
-        if (accounts.some((a) => a.id === id)) {
-          return id;
-        }
+      const accounts = this.getAccounts();
+      if (id && accounts.some((a) => a.id === id)) {
+        return id;
+      }
+      if (accounts.length > 0) {
+        return accounts[0].id;
       }
     } catch (e) {
       console.error('Failed to get active account id', e);
     }
-    return 'acc-1';
+    return null;
   },
 
   setActiveAccountId(accId) {
     try {
-      localStorage.setItem(STORAGE_KEY_ACTIVE_ACCOUNT_ID, accId);
+      if (accId) {
+        localStorage.setItem(STORAGE_KEY_ACTIVE_ACCOUNT_ID, accId);
+      } else {
+        localStorage.removeItem(STORAGE_KEY_ACTIVE_ACCOUNT_ID);
+      }
     } catch (e) {
       console.error('Failed to set active account id', e);
     }
@@ -277,15 +287,15 @@ export const storageService = {
 
   getActiveAccount() {
     const accId = this.getActiveAccountId();
+    if (!accId) return null;
     const accounts = this.getAccounts();
-    return accounts.find((a) => a.id === accId) || accounts[0] || DEFAULT_ACCOUNTS[0];
+    return accounts.find((a) => a.id === accId) || null;
   },
 
   verifyAccountPin(accId, inputPin) {
     const accounts = this.getAccounts();
     const account = accounts.find((a) => a.id === accId);
     if (!account) return false;
-    // Strict comparison of string representation
     return String(account.pin || '1234') === String(inputPin).trim();
   },
 
@@ -308,19 +318,21 @@ export const storageService = {
   // ---------------------------------------------------------------------
 
   _getJourneysKey(accId = this.getActiveAccountId()) {
-    return `bloomtrail_acc_${accId}_journeys_v2`;
+    const effectiveId = accId || 'default';
+    return `bloomtrail_acc_${effectiveId}_journeys_v2`;
   },
 
   loadJourneys(accId = this.getActiveAccountId()) {
+    const effectiveId = accId || 'acc-1';
     try {
-      const key = this._getJourneysKey(accId);
+      const key = this._getJourneysKey(effectiveId);
       const data = localStorage.getItem(key);
       if (data) {
         return JSON.parse(data);
       }
 
       // Check legacy key for Account 1 migration
-      if (accId === 'acc-1') {
+      if (effectiveId === 'acc-1') {
         const legacyData = localStorage.getItem(STORAGE_KEY_LEGACY_JOURNEYS);
         if (legacyData) {
           const parsedLegacy = JSON.parse(legacyData);
@@ -335,16 +347,16 @@ export const storageService = {
     }
 
     // Default seed for this account
-    this.saveJourneys(DEFAULT_JOURNEYS, accId);
+    this.saveJourneys(DEFAULT_JOURNEYS, effectiveId);
     return DEFAULT_JOURNEYS;
   },
 
   saveJourneys(journeys, accId = this.getActiveAccountId()) {
+    const effectiveId = accId || 'acc-1';
     try {
-      const key = this._getJourneysKey(accId);
+      const key = this._getJourneysKey(effectiveId);
       localStorage.setItem(key, JSON.stringify(journeys));
-      // Keep legacy storage key updated for acc-1 to maintain backward compatibility
-      if (accId === 'acc-1') {
+      if (effectiveId === 'acc-1') {
         localStorage.setItem(STORAGE_KEY_LEGACY_JOURNEYS, JSON.stringify(journeys));
       }
     } catch (e) {
@@ -357,12 +369,14 @@ export const storageService = {
   // ---------------------------------------------------------------------
 
   _getHabitsKey(accId = this.getActiveAccountId()) {
-    return `bloomtrail_acc_${accId}_habits_v2`;
+    const effectiveId = accId || 'default';
+    return `bloomtrail_acc_${effectiveId}_habits_v2`;
   },
 
   loadHabitMilestones(accId = this.getActiveAccountId()) {
+    const effectiveId = accId || 'acc-1';
     try {
-      const key = this._getHabitsKey(accId);
+      const key = this._getHabitsKey(effectiveId);
       const data = localStorage.getItem(key);
       if (data) {
         return JSON.parse(data);
@@ -370,31 +384,26 @@ export const storageService = {
     } catch (e) {
       console.error('Failed to load habit milestones', e);
     }
-    // Seed default habit milestones for account
-    this.saveHabitMilestones(DEFAULT_HABIT_MILESTONES, accId);
+    this.saveHabitMilestones(DEFAULT_HABIT_MILESTONES, effectiveId);
     return DEFAULT_HABIT_MILESTONES;
   },
 
   saveHabitMilestones(habits, accId = this.getActiveAccountId()) {
+    const effectiveId = accId || 'acc-1';
     try {
-      const key = this._getHabitsKey(accId);
+      const key = this._getHabitsKey(effectiveId);
       localStorage.setItem(key, JSON.stringify(habits));
     } catch (e) {
       console.error('Failed to save habit milestones', e);
     }
   },
 
-  /**
-   * Helper: Calculate weekly progress and milestone status string
-   * e.g., "Jogging 3 days minimum a week"
-   */
   getHabitWeeklyStatus(habit, referenceDate = new Date()) {
     const target = habit.targetDaysPerWeek || 3;
     const stamps = habit.stamps || [];
 
-    // Compute start and end of week (Monday to Sunday)
     const ref = new Date(referenceDate);
-    const dayOfWeek = ref.getDay(); // 0 is Sunday, 1 is Monday
+    const dayOfWeek = ref.getDay();
     const distanceToMonday = (dayOfWeek + 6) % 7;
     const monday = new Date(ref);
     monday.setDate(ref.getDate() - distanceToMonday);
@@ -407,9 +416,7 @@ export const storageService = {
     const mondayStr = monday.toISOString().split('T')[0];
     const sundayStr = sunday.toISOString().split('T')[0];
 
-    // Filter stamps falling in this week
     const thisWeekStamps = stamps.filter((s) => s.date >= mondayStr && s.date <= sundayStr);
-    // Count unique days stamped
     const uniqueDays = new Set(thisWeekStamps.map((s) => s.date));
     const completedDays = uniqueDays.size;
 
@@ -426,7 +433,6 @@ export const storageService = {
       statusMessage = `🏃 ${completedDays}/${target} days completed this week. Only ${daysLeft} more day${daysLeft > 1 ? 's' : ''} to reach your milestone!`;
     }
 
-    // Build day-by-day week status [Mon ... Sun]
     const weekDays = [];
     const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     for (let i = 0; i < 7; i++) {
@@ -462,18 +468,20 @@ export const storageService = {
   // ---------------------------------------------------------------------
 
   _getSettingsKey(accId = this.getActiveAccountId()) {
-    return `bloomtrail_acc_${accId}_settings_v2`;
+    const effectiveId = accId || 'default';
+    return `bloomtrail_acc_${effectiveId}_settings_v2`;
   },
 
   loadSettings(accId = this.getActiveAccountId()) {
+    const effectiveId = accId || 'acc-1';
     try {
-      const key = this._getSettingsKey(accId);
+      const key = this._getSettingsKey(effectiveId);
       const data = localStorage.getItem(key);
       if (data) {
         return { ...DEFAULT_SETTINGS, ...JSON.parse(data) };
       }
 
-      if (accId === 'acc-1') {
+      if (effectiveId === 'acc-1') {
         const legacyData = localStorage.getItem(STORAGE_KEY_LEGACY_SETTINGS);
         if (legacyData) {
           return { ...DEFAULT_SETTINGS, ...JSON.parse(legacyData) };
@@ -486,10 +494,11 @@ export const storageService = {
   },
 
   saveSettings(settings, accId = this.getActiveAccountId()) {
+    const effectiveId = accId || 'acc-1';
     try {
-      const key = this._getSettingsKey(accId);
+      const key = this._getSettingsKey(effectiveId);
       localStorage.setItem(key, JSON.stringify(settings));
-      if (accId === 'acc-1') {
+      if (effectiveId === 'acc-1') {
         localStorage.setItem(STORAGE_KEY_LEGACY_SETTINGS, JSON.stringify(settings));
       }
     } catch (e) {
@@ -503,20 +512,21 @@ export const storageService = {
 
   exportJSONBackup() {
     const currentAcc = this.getActiveAccount();
+    const currentAccId = currentAcc?.id || 'acc-1';
     const backup = {
       version: '2.0',
       exportedAt: new Date().toISOString(),
       account: currentAcc,
       accounts: this.getAccounts(),
-      journeys: this.loadJourneys(currentAcc.id),
-      habitMilestones: this.loadHabitMilestones(currentAcc.id),
-      settings: this.loadSettings(currentAcc.id),
+      journeys: this.loadJourneys(currentAccId),
+      habitMilestones: this.loadHabitMilestones(currentAccId),
+      settings: this.loadSettings(currentAccId),
     };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `BloomTrail_${currentAcc.name}_Backup_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `BloomTrail_${currentAcc?.name || 'Backup'}_${new Date().toISOString().split('T')[0]}.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -526,7 +536,7 @@ export const storageService = {
   importJSONBackup(jsonString) {
     try {
       const data = JSON.parse(jsonString);
-      const activeId = this.getActiveAccountId();
+      const activeId = this.getActiveAccountId() || 'acc-1';
       if (data && Array.isArray(data.journeys)) {
         this.saveJourneys(data.journeys, activeId);
         if (Array.isArray(data.habitMilestones)) {
@@ -546,7 +556,6 @@ export const storageService = {
     return false;
   },
 
-  // Calculate high-level stats
   getStats(journeys) {
     let totalMilestones = 0;
     let completedMilestones = 0;

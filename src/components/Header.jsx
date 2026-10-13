@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Wifi, WifiOff, Volume2, VolumeX, Settings, Download, Flame, User, Lock } from 'lucide-react';
+import { Wifi, WifiOff, Volume2, VolumeX, Settings, Download, Flame } from 'lucide-react';
 import { soundEngine } from '../services/soundEngine';
+import { AccountTopLeftPopup } from './AccountTopLeftPopup';
 
 export function Header({
   isOnline,
@@ -9,10 +10,15 @@ export function Header({
   soundEnabled,
   onToggleSound,
   activeAccount,
-  onOpenAccounts,
+  accounts = [],
+  onSelectAccountPrompt,
+  onOpenAddAccount,
+  onOpenEditProfile,
+  onLockSession,
 }) {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isAccountPopupOpen, setIsAccountPopupOpen] = useState(false);
 
   useEffect(() => {
     // Listen for PWA installation prompt
@@ -43,44 +49,45 @@ export function Header({
   return (
     <header className="header-container">
       <div className="header-main-row">
-        <div className="logo-section">
-          <div className="logo-icon-bubble">🌱</div>
-          <div className="logo-text">
-            <h1>BloomTrail</h1>
-            <p className="logo-tagline">Cozy Progression & Milestones</p>
+        {/* Top-Left: Account Pop-up with Good Placement */}
+        <div className="header-left-slot">
+          {activeAccount && (
+            <AccountTopLeftPopup
+              activeAccount={activeAccount}
+              accounts={accounts}
+              isOpen={isAccountPopupOpen}
+              onToggle={() => setIsAccountPopupOpen(!isAccountPopupOpen)}
+              onClose={() => setIsAccountPopupOpen(false)}
+              onSelectAccountPrompt={onSelectAccountPrompt}
+              onOpenAddAccount={onOpenAddAccount}
+              onOpenEditProfile={onOpenEditProfile}
+              onLockSession={onLockSession}
+            />
+          )}
+        </div>
+
+        {/* Center: Cozy App Title */}
+        <div className="header-center-slot">
+          <div className="logo-center-group">
+            <span className="logo-mini-bubble">🌱</span>
+            <span className="logo-title-text">BloomTrail</span>
           </div>
         </div>
 
-        {/* Quick controls on the right */}
-        <div className="header-quick-controls">
-          {/* Netflix-style Account Switcher Pill */}
-          <button
-            className="btn-bubble btn-cream btn-header-account"
-            onClick={() => {
-              soundEngine.playPop();
-              onOpenAccounts();
-            }}
-            title="Switch profile or account (Netflix-style PIN protected)"
-            style={{ padding: '6px 12px', fontSize: '0.82rem' }}
-          >
-            <span style={{ fontSize: 16 }}>{activeAccount?.avatar || '🦊'}</span>
-            <span className="header-account-name">{activeAccount?.name || 'Alex'}</span>
-            <Lock size={12} color="#E65100" />
-          </button>
-
-          {/* Install PWA Button (if available) */}
+        {/* Top-Right: Controls (Install, Sound, Settings) */}
+        <div className="header-right-slot">
           {installPrompt && !isInstalled && (
             <button 
               className="btn-bubble btn-mint btn-install-mini"
               onClick={handleInstallClick}
-              title="Install app to your home screen or desktop!"
+              title="Install app"
             >
-              <Download size={14} />
+              <Download size={13} />
               <span className="install-label">Install</span>
             </button>
           )}
 
-          {/* Sound toggle */}
+          {/* Sound Toggle */}
           <button
             className="btn-icon-bubble"
             onClick={() => {
@@ -89,46 +96,33 @@ export function Header({
             }}
             title={soundEnabled ? 'Mute Sounds' : 'Unmute Sounds'}
           >
-            {soundEnabled ? <Volume2 size={18} /> : <VolumeX size={18} />}
+            {soundEnabled ? <Volume2 size={17} /> : <VolumeX size={17} />}
           </button>
 
-          {/* Settings Button (visible on desktop header; mobile has bottom nav) */}
+          {/* Settings Button (Desktop) */}
           <button
             className="btn-icon-bubble desktop-only-btn"
             onClick={() => {
               soundEngine.playPop();
               onOpenSettings();
             }}
-            title="Open Settings & Audio Chimes"
+            title="Open Settings"
           >
-            <Settings size={18} />
+            <Settings size={17} />
           </button>
         </div>
       </div>
 
-      {/* Badges Row (Account Badge + Streak + Online Status) */}
+      {/* Badges Row (Streak + Online Status Only, NO Duplicates!) */}
       <div className="header-badges-row">
-        <div 
-          className="badge-pill badge-account-clickable" 
-          onClick={() => {
-            soundEngine.playPop();
-            onOpenAccounts();
-          }}
-          title="Switch Account (Netflix Style)"
-          style={{ cursor: 'pointer' }}
-        >
-          <span>{activeAccount?.avatar || '🦊'}</span>
-          <span>{activeAccount?.name || 'Alex'} (PIN 🔒)</span>
-        </div>
-
         <div className="badge-pill badge-streak" title="Daily Check-in Streak!">
-          <Flame size={15} fill="#FF8A00" color="#B23A00" />
+          <Flame size={14} fill="#FF8A00" color="#B23A00" />
           <span>{streakCount} Day Streak</span>
         </div>
 
         <div 
           className={`badge-pill ${isOnline ? 'badge-online' : 'badge-offline'}`}
-          title={isOnline ? 'Connected & Ready to Sync' : 'Offline Mode - Saving locally!'}
+          title={isOnline ? 'Online' : 'Offline'}
         >
           {isOnline ? <Wifi size={13} /> : <WifiOff size={13} />}
           <span>{isOnline ? 'Online' : 'Offline'}</span>
