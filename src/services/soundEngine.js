@@ -1,7 +1,7 @@
 // Web Audio API Sound Synthesizer + Custom Audio Controller
 // 100% Offline synthesizer + support for custom audio and YouTube alarms
 
-import { getCustomAudioFile } from './audioStorage';
+import { getCustomAudioFile } from './audioStorage.js';
 
 export function extractYouTubeId(url) {
   if (!url) return null;
@@ -20,6 +20,7 @@ class SoundEngine {
   }
 
   init() {
+    if (typeof window === 'undefined') return;
     if (!this.audioCtx) {
       const AudioContextClass = window.AudioContext || window.webkitAudioContext;
       if (AudioContextClass) {

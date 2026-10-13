@@ -1,14 +1,17 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { Plus, Sparkles, Check, Lock, Clock, Calendar, ChevronRight } from 'lucide-react';
+import { Plus, Sparkles, Check, Lock, Calendar, ChevronRight } from 'lucide-react';
 import { soundEngine } from '../services/soundEngine';
 
 export function RoadmapView({
   journey,
   onSelectMilestone,
   onAddMilestone,
+  onArchiveJourney,
+  onDeleteJourney,
 }) {
   const containerRef = useRef(null);
   const [svgPathD, setSvgPathD] = useState('');
+  const [confirmAction, setConfirmAction] = useState(null); // 'archive' | 'delete' | null
 
   const milestones = journey?.milestones || [];
   const completedCount = milestones.filter((m) => m.status === 'completed').length;
@@ -91,15 +94,100 @@ export function RoadmapView({
           </div>
         </div>
 
-        {/* Progress Tracker */}
-        <div className="progress-track">
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 700, marginBottom: 6 }}>
-            <span>Roadmap Progress</span>
-            <span>{progressPercent}% ({completedCount}/{milestones.length})</span>
+        {/* Progress Tracker & Trail Options */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', maxWidth: 320 }}>
+          <div className="progress-track">
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', fontWeight: 700, marginBottom: 6 }}>
+              <span>Roadmap Progress</span>
+              <span>{progressPercent}% ({completedCount}/{milestones.length})</span>
+            </div>
+            <div className="progress-track-bar">
+              <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
+            </div>
           </div>
-          <div className="progress-track-bar">
-            <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
-          </div>
+
+          {/* Trail Manage Actions: Archive & Delete */}
+          {journey.id && journey.id !== 'default' && (
+            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap' }}>
+              {confirmAction === 'archive' ? (
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#FFF9E6', padding: '4px 8px', borderRadius: 12, border: '1.5px solid var(--border-color)' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700 }}>Archive trail?</span>
+                  <button
+                    type="button"
+                    className="btn-bubble btn-mint"
+                    style={{ padding: '3px 8px', fontSize: '0.72rem' }}
+                    onClick={() => {
+                      soundEngine.playSuccess();
+                      setConfirmAction(null);
+                      onArchiveJourney(journey.id);
+                    }}
+                  >
+                    Confirm
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-bubble btn-cream"
+                    style={{ padding: '3px 8px', fontSize: '0.72rem' }}
+                    onClick={() => setConfirmAction(null)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : confirmAction === 'delete' ? (
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', background: '#FFEAEA', padding: '4px 8px', borderRadius: 12, border: '1.5px solid #FFCDD2' }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#C62828' }}>Delete forever?</span>
+                  <button
+                    type="button"
+                    className="btn-bubble"
+                    style={{ padding: '3px 8px', fontSize: '0.72rem', background: '#FF5252', color: '#fff', borderColor: '#C62828' }}
+                    onClick={() => {
+                      soundEngine.playPop();
+                      setConfirmAction(null);
+                      onDeleteJourney(journey.id);
+                    }}
+                  >
+                    Delete
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-bubble btn-cream"
+                    style={{ padding: '3px 8px', fontSize: '0.72rem' }}
+                    onClick={() => setConfirmAction(null)}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="btn-bubble btn-cream"
+                    style={{ padding: '5px 10px', fontSize: '0.76rem' }}
+                    onClick={() => {
+                      soundEngine.playPop();
+                      setConfirmAction('archive');
+                    }}
+                    title="Archive this trail"
+                  >
+                    <span>📦 Archive</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    className="btn-bubble btn-cream"
+                    style={{ padding: '5px 10px', fontSize: '0.76rem', color: '#C62828' }}
+                    onClick={() => {
+                      soundEngine.playPop();
+                      setConfirmAction('delete');
+                    }}
+                    title="Delete this trail permanently"
+                  >
+                    <span>🗑️ Delete</span>
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

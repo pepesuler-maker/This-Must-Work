@@ -11,6 +11,7 @@ import { MilestoneModal } from './components/MilestoneModal';
 import { SettingsModal } from './components/SettingsModal';
 import { NewJourneyModal } from './components/NewJourneyModal';
 import { AlarmAlertModal } from './components/AlarmAlertModal';
+import { ArchivedJourneysModal } from './components/ArchivedJourneysModal';
 import { storageService } from './services/storageService';
 import { soundEngine } from './services/soundEngine';
 import { notificationService } from './services/notificationService';
@@ -25,6 +26,7 @@ export default function App() {
   const [selectedMilestone, setSelectedMilestone] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isNewJourneyOpen, setIsNewJourneyOpen] = useState(false);
+  const [isArchivedModalOpen, setIsArchivedModalOpen] = useState(false);
   const [activeAlarmData, setActiveAlarmData] = useState(null);
 
   // Set sound engine parameters
@@ -69,11 +71,52 @@ export default function App() {
     storageService.saveJourneys(journeys);
   }, [journeys]);
 
-  // Active Journey Object
-  const currentJourney = journeys.find((j) => j.id === activeJourneyId) || journeys[0] || {
-    id: 'default',
-    title: 'My Journey',
-    milestones: [],
+  // Separate active and archived journeys
+  const activeJourneys = journeys.filter((j) => !j.isArchived);
+  const archivedJourneys = journeys.filter((j) => j.isArchived);
+
+  // Active Journey Object (defaults to first active journey)
+  const currentJourney = activeJourneys.find((j) => j.id === activeJourneyId) 
+    || activeJourneys[0] 
+    || journeys[0] 
+    || {
+      id: 'default',
+      title: 'My Journey',
+      milestones: [],
+    };
+
+  // Archive a trail/journey
+  const handleArchiveJourney = (jId) => {
+    soundEngine.playPop();
+    const updated = journeys.map((j) =>
+      j.id === jId ? { ...j, isArchived: true, archivedAt: new Date().toISOString() } : j
+    );
+    setJourneys(updated);
+    const remainingActive = updated.filter((j) => !j.isArchived);
+    if (remainingActive.length > 0) {
+      setActiveJourneyId(remainingActive[0].id);
+    }
+  };
+
+  // Restore an archived trail
+  const handleRestoreJourney = (jId) => {
+    soundEngine.playSuccess();
+    const updated = journeys.map((j) =>
+      j.id === jId ? { ...j, isArchived: false, archivedAt: null } : j
+    );
+    setJourneys(updated);
+    setActiveJourneyId(jId);
+  };
+
+  // Delete a trail completely
+  const handleDeleteJourney = (jId) => {
+    soundEngine.playPop();
+    const updated = journeys.filter((j) => j.id !== jId);
+    setJourneys(updated);
+    const remainingActive = updated.filter((j) => !j.isArchived);
+    if (remainingActive.length > 0) {
+      setActiveJourneyId(remainingActive[0].id);
+    }
   };
 
   // Add a new milestone to the active journey
@@ -196,7 +239,7 @@ export default function App() {
       {activeTab === 'roadmap' && (
         <div className="journey-chips-bar">
           <div className="journey-chips-scroller">
-            {journeys.map((j) => {
+            {activeJourneys.map((j) => {
               // Strip duplicate icon from title if present
               const displayTitle = j.title && j.icon && j.title.startsWith(j.icon)
                 ? j.title.slice(j.icon.length).trim()
@@ -227,6 +270,20 @@ export default function App() {
               <Plus size={15} />
               <span>New Quest</span>
             </button>
+
+            {/* Archived Trails Chip */}
+            {archivedJourneys.length > 0 && (
+              <button
+                className="journey-chip chip-archived"
+                onClick={() => {
+                  soundEngine.playPop();
+                  setIsArchivedModalOpen(true);
+                }}
+                title="View and restore archived trails"
+              >
+                <span>📦 Archived ({archivedJourneys.length})</span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -238,6 +295,8 @@ export default function App() {
             journey={currentJourney}
             onSelectMilestone={(ms) => setSelectedMilestone(ms)}
             onAddMilestone={() => handleAddMilestone()}
+            onArchiveJourney={handleArchiveJourney}
+            onDeleteJourney={handleDeleteJourney}
           />
         )}
 
@@ -345,6 +404,15 @@ export default function App() {
           alertData={activeAlarmData}
           onDismiss={() => setActiveAlarmData(null)}
           onOpenMilestone={(ms) => setSelectedMilestone(ms)}
+        />
+      )}
+      {/* Archived Journeys Modal */}
+      {isArchivedModalOpen && (
+        <ArchivedJourneysModal
+          archivedJourneys={archivedJourneys}
+          onClose={() => setIsArchivedModalOpen(false)}
+          onRestoreJourney={handleRestoreJourney}
+          onDeleteJourney={handleDeleteJourney}
         />
       )}
     </div>
