@@ -36,6 +36,7 @@ export default function App() {
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
 
   const requireAccount = () => {
+    if (activeAccount) return true;
     soundEngine.playPop();
     setIsAuthPromptOpen(true);
     return false;
@@ -56,7 +57,10 @@ export default function App() {
   const [isArchivedModalOpen, setIsArchivedModalOpen] = useState(false);
   const [activeAlarmData, setActiveAlarmData] = useState(null);
 
-  const activeAccount = accounts.find((a) => a.id === activeAccountId) || null;
+  const activeAccount = 
+    accounts.find((a) => a.id === activeAccountId) || 
+    (activeAccountId ? storageService.getAccounts().find((a) => a.id === activeAccountId) : null) ||
+    null;
 
   // Set sound engine parameters
   useEffect(() => {
@@ -112,6 +116,8 @@ export default function App() {
   const handleSelectAccount = (newAccId) => {
     storageService.setActiveAccountId(newAccId);
     setActiveAccountId(newAccId);
+    setIsAuthPromptOpen(false);
+    setIsEmailAuthModalOpen(false);
 
     const freshAccounts = storageService.getAccounts();
     setAccounts(freshAccounts);
@@ -130,6 +136,8 @@ export default function App() {
   const handleAccountCreated = (newAcc) => {
     const freshAccounts = storageService.getAccounts();
     setAccounts(freshAccounts);
+    setIsAuthPromptOpen(false);
+    setIsEmailAuthModalOpen(false);
     handleSelectAccount(newAcc.id);
   };
 
@@ -581,7 +589,7 @@ export default function App() {
             setIsEmailAuthModalOpen(true);
           }}
           onSignOut={() => {
-            storageService.setActiveAccountId(null);
+            storageService.setActiveAccountId('guest');
             setActiveAccountId(null);
             setIsSettingsOpen(false);
           }}
@@ -598,7 +606,7 @@ export default function App() {
         />
       )}
 
-      {/* Email Auth Modal (Invoked from Settings "Add Another Account") */}
+      {/* Email Auth Modal (Invoked from Settings or Auth Prompt) */}
       {isEmailAuthModalOpen && (
         <EmailAuthModal
           initialMode={emailAuthMode}
@@ -607,6 +615,7 @@ export default function App() {
             setAccounts(freshAccounts);
             handleSelectAccount(newAcc.id);
             setIsEmailAuthModalOpen(false);
+            setIsAuthPromptOpen(false);
           }}
           onClose={() => setIsEmailAuthModalOpen(false)}
         />

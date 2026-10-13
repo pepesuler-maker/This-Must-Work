@@ -467,6 +467,34 @@ const signInFailEmail = storageService.signInWithEmail('nonexistent@example.com'
 assert(signInFailEmail.success === false, 'Sign in fails with non-existent email');
 
 // ---------------------------------------------------------------------
+// TEST SUITE 11: Pre-seeded User Account (pepesuler@gmail.com / 1234) & Session
+// ---------------------------------------------------------------------
+console.log('\n🦊 Test Suite 11: Pre-seeded User Account (pepesuler@gmail.com / 1234)');
+
+const accountsList = storageService.getAccounts();
+const pepeAcc = accountsList.find(a => a.email && a.email.toLowerCase() === 'pepesuler@gmail.com');
+assert(Boolean(pepeAcc), 'Account pepesuler@gmail.com is pre-seeded in storageService');
+assert(pepeAcc.password === '1234', 'Account pepesuler@gmail.com has password 1234');
+assert(pepeAcc.isVerified === true, 'Account pepesuler@gmail.com has verified email');
+
+// Test signing in as pepesuler@gmail.com with password 1234
+const pepeSignIn = storageService.signInWithEmail('pepesuler@gmail.com', '1234');
+assert(pepeSignIn.success === true, 'Sign in succeeds for pepesuler@gmail.com with password 1234');
+assert(pepeSignIn.account.id === pepeAcc.id, 'Sign in returns valid account object for Pepe');
+
+// Verify active account id is set
+const activeAccId = storageService.getActiveAccountId();
+assert(activeAccId === pepeAcc.id, 'Active account id is set to pepesuler@gmail.com account ID');
+const activeAccountObj = storageService.getActiveAccount();
+assert(Boolean(activeAccountObj && activeAccountObj.id === pepeAcc.id), 'getActiveAccount returns active account for Pepe');
+
+// Verify feature actions work without requiring account creation prompt
+const pepeJourneys = storageService.loadJourneys(pepeAcc.id);
+assert(Array.isArray(pepeJourneys) && pepeJourneys.length > 0, 'pepesuler@gmail.com has isolated journeys');
+const pepeHabits = storageService.loadHabitMilestones(pepeAcc.id);
+assert(Array.isArray(pepeHabits) && pepeHabits.length > 0, 'pepesuler@gmail.com has isolated habit milestones');
+
+// ---------------------------------------------------------------------
 // TEST SUMMARY REPORT
 // ---------------------------------------------------------------------
 

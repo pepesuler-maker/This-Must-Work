@@ -459,6 +459,22 @@ export function EmailAuthModal({
               <Check size={16} />
               <span>Sign In to Account</span>
             </button>
+
+            <div style={{ marginTop: 12 }}>
+              <button
+                type="button"
+                className="btn-bubble btn-cream"
+                style={{ width: '100%', padding: '8px', fontSize: '0.8rem', borderStyle: 'dashed' }}
+                onClick={() => {
+                  soundEngine.playPop();
+                  setSignInEmail('pepesuler@gmail.com');
+                  setSignInPassword('1234');
+                  setErrorMessage('');
+                }}
+              >
+                🦊 Quick Fill Test: pepesuler@gmail.com / 1234
+              </button>
+            </div>
           </form>
         )}
       </div>

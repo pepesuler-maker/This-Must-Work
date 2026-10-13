@@ -73,19 +73,41 @@ export function Header({
 
         {/* Right: Quick Controls */}
         <div className="header-quick-controls">
-          {/* Guest Sign In / Create Account button */}
-          {!activeAccount && onOpenAuthPrompt && (
+          {/* Active Account Pill or Guest Sign In button */}
+          {activeAccount ? (
             <button
-              className="btn-bubble btn-mint btn-install-mini"
+              className="btn-bubble btn-cream btn-header-account-pill"
               onClick={() => {
                 soundEngine.playPop();
-                onOpenAuthPrompt();
+                onOpenSettings();
               }}
-              title="Create Account to save your progress"
+              title={`Logged in as ${activeAccount.name} (${activeAccount.email}). Tap to manage settings & profile.`}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '6px 12px',
+                fontSize: '0.82rem',
+                fontWeight: 800,
+              }}
             >
-              <User size={13} />
-              <span className="install-label">Create Account</span>
+              <span style={{ fontSize: 16 }}>{activeAccount.avatar || '🦊'}</span>
+              <span className="account-pill-name">{activeAccount.name}</span>
             </button>
+          ) : (
+            onOpenAuthPrompt && (
+              <button
+                className="btn-bubble btn-mint btn-install-mini"
+                onClick={() => {
+                  soundEngine.playPop();
+                  onOpenAuthPrompt();
+                }}
+                title="Create Account to save your progress"
+              >
+                <User size={13} />
+                <span className="install-label">Create Account</span>
+              </button>
+            )
           )}
 
           {installPrompt && !isInstalled && (

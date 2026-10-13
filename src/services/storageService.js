@@ -183,6 +183,20 @@ const DEFAULT_SETTINGS = {
   lastStreakDate: new Date().toISOString().split('T')[0],
 };
 
+// Default testing user account requested by user
+export const DEFAULT_TEST_ACCOUNT = {
+  id: 'acc-pepe',
+  name: 'Pepe',
+  email: 'pepesuler@gmail.com',
+  password: '1234',
+  pin: '1234',
+  avatar: '🦊',
+  themeColor: '#7BDCB5',
+  bio: 'Cozy adventurer tracking jogging & milestones.',
+  isVerified: true,
+  createdAt: '2026-01-01T00:00:00.000Z',
+};
+
 export const storageService = {
   // ---------------------------------------------------------------------
   // Email Auth & Account Management (Stored Securely & Offline-First)
@@ -191,27 +205,35 @@ export const storageService = {
   getAccounts() {
     try {
       const data = localStorage.getItem(STORAGE_KEY_ACCOUNTS);
+      let list = [];
       if (data) {
         const parsed = JSON.parse(data);
         if (Array.isArray(parsed) && parsed.length > 0) {
           // Remove dummy accounts (e.g. legacy acc-1, acc-dummy)
-          const nonDummy = parsed.filter(
+          list = parsed.filter(
             (acc) => acc.id !== 'acc-1' && acc.id !== 'acc-dummy'
           );
-          if (nonDummy.length !== parsed.length) {
-            this.saveAccounts(nonDummy);
-          }
-          return nonDummy.map((acc) => ({
-            ...acc,
-            email: acc.email || `${acc.name.toLowerCase().replace(/\s+/g, '')}@bloomtrail.app`,
-            isVerified: acc.isVerified ?? true,
-          }));
         }
       }
+
+      // Ensure test user account is always pre-seeded and available
+      const hasPepe = list.some(
+        (acc) => acc.email && acc.email.toLowerCase() === 'pepesuler@gmail.com'
+      );
+      if (!hasPepe) {
+        list.push(DEFAULT_TEST_ACCOUNT);
+        this.saveAccounts(list);
+      }
+
+      return list.map((acc) => ({
+        ...acc,
+        email: acc.email || `${acc.name.toLowerCase().replace(/\s+/g, '')}@bloomtrail.app`,
+        isVerified: acc.isVerified ?? true,
+      }));
     } catch (e) {
       console.error('Failed to load accounts', e);
     }
-    return [];
+    return [DEFAULT_TEST_ACCOUNT];
   },
 
   saveAccounts(accounts) {
@@ -358,6 +380,15 @@ export const storageService = {
       const accounts = this.getAccounts();
       if (id && accounts.some((a) => a.id === id)) {
         return id;
+      }
+      // If user hasn't explicitly set a session or signed out to guest mode,
+      // default to the testing account 'acc-pepe' (pepesuler@gmail.com)
+      if (id === null) {
+        const pepe = accounts.find((a) => a.email && a.email.toLowerCase() === 'pepesuler@gmail.com');
+        if (pepe) {
+          this.setActiveAccountId(pepe.id);
+          return pepe.id;
+        }
       }
     } catch (e) {
       console.error('Failed to get active account id', e);
