@@ -1,19 +1,39 @@
 import React, { useState } from 'react';
 import { 
   ChevronLeft, ChevronRight, Calendar as CalendarIcon, 
-  Download, Plus, Sparkles, CheckCircle2, Clock 
+  Download, Plus, Sparkles, CheckCircle2, Clock, Check, X 
 } from 'lucide-react';
 import { soundEngine } from '../services/soundEngine';
 import { generateICSContent, downloadICSFile } from '../services/calendarExport';
 
+// Local date string formatter (YYYY-MM-DD) avoiding timezone shifts
+const formatLocalDate = (d = new Date()) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
 export function CalendarView({
   journeys,
+  activeJourneyId,
   onSelectMilestone,
   onAddMilestoneWithDate,
+  onAddMilestoneDirect,
 }) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = formatLocalDate(new Date());
   const [selectedDateStr, setSelectedDateStr] = useState(todayStr);
+
+  // Quick add on date state
+  const [isAddingOnDate, setIsAddingOnDate] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newTime, setNewTime] = useState('10:00');
+
+  const activeJourneys = journeys.filter((j) => !j.isArchived);
+  const [selectedJourneyId, setSelectedJourneyId] = useState(
+    activeJourneyId || activeJourneys[0]?.id || (journeys[0] ? journeys[0].id : '')
+  );
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -28,19 +48,44 @@ export function CalendarView({
 
   const prevMonth = () => {
     soundEngine.playPop();
-    setCurrentDate(new Date(year, month - 1, 1));
+    const newDate = new Date(year, month - 1, 1);
+    setCurrentDate(newDate);
+    setSelectedDateStr(formatLocalDate(newDate));
   };
 
   const nextMonth = () => {
     soundEngine.playPop();
-    setCurrentDate(new Date(year, month + 1, 1));
+    const newDate = new Date(year, month + 1, 1);
+    setCurrentDate(newDate);
+    setSelectedDateStr(formatLocalDate(newDate));
   };
 
   const goToToday = () => {
     soundEngine.playPop();
     const now = new Date();
     setCurrentDate(now);
-    setSelectedDateStr(now.toISOString().split('T')[0]);
+    setSelectedDateStr(formatLocalDate(now));
+  };
+
+  // Quick add checkpoint to selected date
+  const handleQuickAdd = (e) => {
+    if (e) e.preventDefault();
+    if (!newTitle.trim()) return;
+
+    const targetJId = selectedJourneyId || activeJourneys[0]?.id || journeys[0]?.id;
+    if (onAddMilestoneDirect) {
+      onAddMilestoneDirect({
+        title: newTitle.trim(),
+        journeyId: targetJId,
+        targetDate: selectedDateStr,
+        reminderTime: newTime || '10:00',
+      });
+    } else if (onAddMilestoneWithDate) {
+      onAddMilestoneWithDate(selectedDateStr, targetJId);
+    }
+
+    setNewTitle('');
+    setIsAddingOnDate(false);
   };
 
   // Collect all milestones with dates across all journeys
@@ -187,18 +232,133 @@ export function CalendarView({
             <span>Checkpoints for {selectedDateStr}</span>
           </h4>
 
-          <button
-            className="btn-bubble btn-peach"
-            style={{ padding: '6px 12px', fontSize: '0.78rem' }}
-            onClick={() => {
-              soundEngine.playPop();
-              onAddMilestoneWithDate(selectedDateStr);
+          {!isAddingOnDate && (
+            <button
+              className="btn-bubble btn-peach"
+              style={{ padding: '6px 12px', fontSize: '0.78rem' }}
+              onClick={() => {
+                soundEngine.playPop();
+                setIsAddingOnDate(true);
+              }}
+            >
+              <Plus size={14} />
+              <span>Add on this Date</span>
+            </button>
+          )}
+        </div>
+
+        {/* Inline Quick Add Form */}
+        {isAddingOnDate && (
+          <form
+            onSubmit={handleQuickAdd}
+            style={{
+              background: '#FFF9E6',
+              border: '2px solid var(--border-color)',
+              borderRadius: 18,
+              padding: '12px 14px',
+              marginBottom: 14,
+              boxShadow: '0 3px 0 var(--border-color)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
             }}
           >
-            <Plus size={14} />
-            <span>Add on this Date</span>
-          </button>
-        </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span>🌱</span> New Checkpoint ({selectedDateStr})
+              </span>
+              <button
+                type="button"
+                className="btn-icon-bubble"
+                style={{ width: 22, height: 22 }}
+                onClick={() => setIsAddingOnDate(false)}
+                title="Cancel"
+              >
+                <X size={12} />
+              </button>
+            </div>
+
+            <input
+              type="text"
+              className="input-bubble"
+              placeholder="What do you plan to achieve? (e.g. Master Flexbox)"
+              value={newTitle}
+              onChange={(e) => setNewTitle(e.target.value)}
+              autoFocus
+              style={{ padding: '8px 12px', fontSize: '0.88rem', background: '#FFFFFF' }}
+            />
+
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {activeJourneys.length > 0 && (
+                <div style={{ flex: 1, minWidth: 140 }}>
+                  <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 2 }}>
+                    Trail:
+                  </label>
+                  <select
+                    className="input-bubble"
+                    value={selectedJourneyId}
+                    onChange={(e) => setSelectedJourneyId(e.target.value)}
+                    style={{ padding: '6px 10px', fontSize: '0.78rem', width: '100%', background: '#FFFFFF' }}
+                  >
+                    {activeJourneys.map((j) => (
+                      <option key={j.id} value={j.id}>
+                        {j.icon || '🌱'} {j.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div style={{ width: 110 }}>
+                <label style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 2 }}>
+                  Reminder:
+                </label>
+                <input
+                  type="time"
+                  className="input-bubble"
+                  value={newTime}
+                  onChange={(e) => setNewTime(e.target.value)}
+                  style={{ padding: '6px 10px', fontSize: '0.78rem', width: '100%', background: '#FFFFFF' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+              <button
+                type="submit"
+                className="btn-bubble btn-mint"
+                style={{ flex: 1, padding: '7px 12px', fontSize: '0.82rem' }}
+              >
+                <Check size={14} />
+                <span>Save Checkpoint</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn-bubble btn-cream"
+                style={{ padding: '7px 12px', fontSize: '0.82rem' }}
+                onClick={() => setIsAddingOnDate(false)}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="btn-bubble btn-cream"
+                style={{ padding: '7px 10px', fontSize: '0.74rem', color: 'var(--text-muted)' }}
+                onClick={() => {
+                  soundEngine.playPop();
+                  const targetJId = selectedJourneyId || activeJourneys[0]?.id || journeys[0]?.id;
+                  onAddMilestoneWithDate(selectedDateStr, targetJId);
+                  setIsAddingOnDate(false);
+                }}
+                title="Open full detailed editor with subtasks, reflections, and rewards"
+              >
+                More Details ↗
+              </button>
+            </div>
+          </form>
+        )}
 
         {selectedDateMilestones.length === 0 ? (
           <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>

@@ -119,15 +119,23 @@ export default function App() {
     }
   };
 
-  // Add a new milestone to the active journey
-  const handleAddMilestone = (prefillDate = '') => {
+  // Helper for reliable local date string (YYYY-MM-DD)
+  const getLocalDateString = (d = new Date()) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  };
+
+  // Add a new milestone to a journey and open modal
+  const handleAddMilestone = (prefillDate = '', targetJourneyId = null) => {
     soundEngine.playPop();
     const newMs = {
       id: 'ms-' + Date.now(),
       title: 'New Checkpoint',
       description: 'Describe what you plan to accomplish here.',
       status: 'in_progress',
-      targetDate: prefillDate || new Date().toISOString().split('T')[0],
+      targetDate: prefillDate || getLocalDateString(),
       reminderTime: '10:00',
       reminderEnabled: true,
       rewardSticker: '🌱 Little Sprout',
@@ -138,24 +146,98 @@ export default function App() {
       ],
     };
 
-    const updatedJourneys = journeys.map((j) => {
-      if (j.id === currentJourney.id) {
-        return {
-          ...j,
-          milestones: [...j.milestones, newMs],
-        };
-      }
-      return j;
-    });
+    const effectiveJourneyId = targetJourneyId 
+      || currentJourney?.id 
+      || activeJourneys[0]?.id 
+      || journeys[0]?.id;
 
-    setJourneys(updatedJourneys);
+    if (journeys.length === 0 || !journeys.some((j) => j.id === effectiveJourneyId)) {
+      const defaultJ = {
+        id: 'journey-' + Date.now(),
+        title: '🌱 Cozy Adventure',
+        description: 'My adventure trail',
+        icon: '🌱',
+        themeColor: '#7BDCB5',
+        createdAt: new Date().toISOString(),
+        milestones: [newMs],
+      };
+      setJourneys([...journeys, defaultJ]);
+      setActiveJourneyId(defaultJ.id);
+    } else {
+      const updatedJourneys = journeys.map((j) => {
+        if (j.id === effectiveJourneyId) {
+          return {
+            ...j,
+            milestones: [...j.milestones, newMs],
+          };
+        }
+        return j;
+      });
+      setJourneys(updatedJourneys);
+    }
+
     setSelectedMilestone(newMs);
+  };
+
+  // Directly create a checkpoint on a date without popup delay
+  const handleAddMilestoneDirect = ({
+    title = 'New Checkpoint',
+    journeyId = null,
+    targetDate = '',
+    reminderTime = '10:00',
+  }) => {
+    soundEngine.playSuccess();
+    const newMs = {
+      id: 'ms-' + Date.now(),
+      title: title.trim() || 'New Checkpoint',
+      description: '',
+      status: 'in_progress',
+      targetDate: targetDate || getLocalDateString(),
+      reminderTime: reminderTime || '10:00',
+      reminderEnabled: true,
+      rewardSticker: '🌱 Little Sprout',
+      reflection: '',
+      completedAt: null,
+      subtasks: [
+        { id: 'st-' + Date.now(), title: 'First action step', completed: false },
+      ],
+    };
+
+    const effectiveJourneyId = journeyId 
+      || currentJourney?.id 
+      || activeJourneys[0]?.id 
+      || journeys[0]?.id;
+
+    if (journeys.length === 0 || !journeys.some((j) => j.id === effectiveJourneyId)) {
+      const defaultJ = {
+        id: 'journey-' + Date.now(),
+        title: '🌱 Cozy Adventure',
+        description: 'My adventure trail',
+        icon: '🌱',
+        themeColor: '#7BDCB5',
+        createdAt: new Date().toISOString(),
+        milestones: [newMs],
+      };
+      setJourneys([...journeys, defaultJ]);
+      setActiveJourneyId(defaultJ.id);
+    } else {
+      const updatedJourneys = journeys.map((j) => {
+        if (j.id === effectiveJourneyId) {
+          return {
+            ...j,
+            milestones: [...j.milestones, newMs],
+          };
+        }
+        return j;
+      });
+      setJourneys(updatedJourneys);
+    }
   };
 
   // Update a milestone
   const handleUpdateMilestone = (updatedMs) => {
     const updatedJourneys = journeys.map((j) => {
-      if (j.id === currentJourney.id || j.milestones.some((m) => m.id === updatedMs.id)) {
+      if (j.milestones.some((m) => m.id === updatedMs.id)) {
         return {
           ...j,
           milestones: j.milestones.map((m) => (m.id === updatedMs.id ? updatedMs : m)),
@@ -303,8 +385,10 @@ export default function App() {
         {activeTab === 'calendar' && (
           <CalendarView
             journeys={journeys}
+            activeJourneyId={activeJourneyId}
             onSelectMilestone={(ms) => setSelectedMilestone(ms)}
-            onAddMilestoneWithDate={(dateStr) => handleAddMilestone(dateStr)}
+            onAddMilestoneWithDate={(dateStr, jId) => handleAddMilestone(dateStr, jId)}
+            onAddMilestoneDirect={handleAddMilestoneDirect}
           />
         )}
 
@@ -366,8 +450,12 @@ export default function App() {
       {/* Milestone Details Drawer Modal */}
       {selectedMilestone && (
         <MilestoneModal
+          key={selectedMilestone.id}
           milestone={selectedMilestone}
-          journeyTitle={currentJourney.title}
+          journeyTitle={
+            journeys.find((j) => j.milestones.some((m) => m.id === selectedMilestone.id))?.title ||
+            currentJourney.title
+          }
           onClose={() => setSelectedMilestone(null)}
           onUpdateMilestone={handleUpdateMilestone}
           onDeleteMilestone={handleDeleteMilestone}

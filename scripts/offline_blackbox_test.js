@@ -178,6 +178,39 @@ const verifiedMs = persistedAfterMilestoneEdit.find(j => j.id === remainingTrail
 assert(verifiedMs?.status === 'completed', 'Milestone status updated to completed offline');
 assert(verifiedMs?.subtasks[0]?.completed === true, 'Subtask checkbox state persisted offline');
 
+// Test Case: Add on this date (Calendar View feature)
+const targetCalDate = '2026-10-25';
+const dateMs = {
+  id: 'ms-cal-' + Date.now(),
+  title: 'Finish Cozy Milestone on Date',
+  description: 'Added specifically for a chosen calendar date',
+  status: 'in_progress',
+  targetDate: targetCalDate,
+  reminderTime: '10:00',
+  reminderEnabled: true,
+  rewardSticker: '🌱 Little Sprout',
+  subtasks: [{ id: 'st-c1', title: 'Action 1', completed: false }],
+};
+
+currentJourneys = currentJourneys.map(j => {
+  if (j.id === remainingTrail.id) {
+    return {
+      ...j,
+      milestones: [...j.milestones, dateMs],
+    };
+  }
+  return j;
+});
+storageService.saveJourneys(currentJourneys);
+
+const reloadedForDate = storageService.loadJourneys();
+const foundOnDate = reloadedForDate
+  .flatMap(j => j.milestones)
+  .filter(m => m.targetDate === targetCalDate);
+
+assert(foundOnDate.length === 1, 'Checkpoints added on a specific date are saved and queried successfully');
+assert(foundOnDate[0].title === 'Finish Cozy Milestone on Date', 'Milestone title matches newly scheduled checkpoint');
+
 // ---------------------------------------------------------------------
 // TEST SUITE 5: Client-Side Offline Sound & Synth Engine
 // ---------------------------------------------------------------------
